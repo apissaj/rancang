@@ -35,7 +35,37 @@ export async function streamChatCompletion(model: string, messages: ChatMessage[
 export function toTextDeltaStream(upstream: ReadableStream<Uint8Array>): ReadableStream<Uint8Array> {
   const decoder = new TextDecoder();
   const encoder = new TextEncoder();
-  let buffer = "";
+  let sseBuffer = "";
+  // Some reasoning models (e.g. Test-Combo) prefix output with a <think>...</think>
+  // block. Strip it before it ever reaches the client — buffer deltas until we
+  // know we are past </think>, or until it's clear there is no think block at all.
+  let textBuffer = "";
+  let pastThink = false;
+
+  function emit(controller: ReadableStreamDefaultController<Uint8Array>, delta: string) {
+    if (pastThink) {
+      controller.enqueue(encoder.encode(delta));
+      return;
+    }
+    textBuffer += delta;
+    const closeIdx = textBuffer.indexOf("</think>");
+    if (closeIdx !== -1) {
+      const rest = textBuffer.slice(closeIdx + "</think>".length);
+      pastThink = true;
+      textBuffer = "";
+      if (rest) controller.enqueue(encoder.encode(rest));
+      return;
+    }
+    // No </think> seen yet. If buffer clearly isn't starting a <think> block
+    // (first non-whitespace chars don't match "<think" prefix so far), flush
+    // it as normal text — most responses have no think block at all.
+    const probe = textBuffer.trimStart();
+    if (probe.length > 0 && !"<think>".startsWith(probe.slice(0, Math.min(probe.length, 7)))) {
+      pastThink = true;
+      controller.enqueue(encoder.encode(textBuffer));
+      textBuffer = "";
+    }
+  }
 
   return new ReadableStream({
     async start(controller) {
@@ -44,9 +74,9 @@ export function toTextDeltaStream(upstream: ReadableStream<Uint8Array>): Readabl
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
-          buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split("\n");
-          buffer = lines.pop() ?? "";
+          sseBuffer += decoder.decode(value, { stream: true });
+          const lines = sseBuffer.split("\n");
+          sseBuffer = lines.pop() ?? "";
           for (const line of lines) {
             const trimmed = line.trim();
             if (!trimmed.startsWith("data:")) continue;
@@ -55,12 +85,14 @@ export function toTextDeltaStream(upstream: ReadableStream<Uint8Array>): Readabl
             try {
               const json = JSON.parse(payload);
               const delta: string | undefined = json.choices?.[0]?.delta?.content;
-              if (delta) controller.enqueue(encoder.encode(delta));
+              if (delta) emit(controller, delta);
             } catch {
               // ignore malformed SSE chunks
             }
           }
         }
+        // Flush anything still buffered (e.g. response ended before we could confirm no think block)
+        if (!pastThink && textBuffer) controller.enqueue(encoder.encode(textBuffer));
       } catch (err) {
         controller.error(err);
         return;
