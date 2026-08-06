@@ -1,11 +1,11 @@
 # PRD Forge
 
-Two AI tools in one app, no auth, no database, no accounts:
+Two AI tools in one app, no auth or database required:
 
 - **`/chat`** — multi-model chat with an optional side-by-side comparison mode.
 - **`/plan`** — turn a rough idea into a structured PRD (Markdown), streamed live.
 
-Chat history and generated PRDs persist only in your browser's `localStorage`. Nothing is stored server-side.
+Chat history and generated PRDs persist in your browser's `localStorage` by default. Nothing is stored server-side unless you enable optional Google Sign-In (see below), in which case logged-in users also get their history synced to Firestore across devices.
 
 ## Stack
 
@@ -29,6 +29,34 @@ NODE_ENV=production
 - `LLM_BASE_URL` / `LLM_API_KEY` — your OpenAI-compatible gateway. Never exposed to the browser; only read server-side in Route Handlers.
 - `LLM_MODELS` — comma-separated list shown in the model picker.
 - `LLM_DEFAULT_MODEL` — model preselected in chat and used for PRD generation.
+
+## Optional: Google Sign-In + Firestore sync
+
+Both are fully optional. With none of the vars below set, the app runs exactly as described above — anonymous, `localStorage` only. Setting them adds a "Sign in" button in the top nav; signed-in users' chats/PRDs also sync to Firestore so they follow them across devices. Signed-out/anonymous usage is unaffected either way.
+
+**1. Get the Firebase web config** (enables Feature A, sign-in):
+1. Create/open a project at https://console.firebase.google.com
+2. Build → Authentication → Sign-in method → enable **Google**.
+3. Project settings (gear icon) → General → "Your apps" → add a Web app (or open the existing one) → copy the `firebaseConfig` values into the `NEXT_PUBLIC_FIREBASE_*` vars below.
+4. Build → Firestore Database → create a database (any region), then paste the contents of `firestore.rules` (repo root) into Firestore → Rules and publish.
+
+**2. Get the service account JSON** (enables Feature B, sync API routes):
+1. Project settings → Service accounts → "Generate new private key" → downloads a JSON file.
+2. Minify it to a single line (e.g. `jq -c . key.json`) and set it as `FIREBASE_SERVICE_ACCOUNT_JSON`. Keep this secret — never commit it or expose it to the client.
+
+**3. Set the env vars** in `.env`:
+
+```
+NEXT_PUBLIC_FIREBASE_API_KEY=
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=
+NEXT_PUBLIC_FIREBASE_APP_ID=
+FIREBASE_SERVICE_ACCOUNT_JSON={"type":"service_account",...}
+```
+
+If `FIREBASE_SERVICE_ACCOUNT_JSON` is missing or malformed, the `/api/sync/*` routes return `503` and log a warning — the rest of the app keeps working normally.
 
 ## Run locally
 

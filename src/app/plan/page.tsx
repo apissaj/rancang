@@ -8,6 +8,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Markdown } from "@/components/markdown";
 import { PlanSidebar } from "@/components/plan/plan-sidebar";
 import { planStore, type PlanRecord } from "@/lib/storage";
+import { useSync } from "@/lib/use-sync";
+import { SyncIndicator } from "@/components/sync-indicator";
 
 const EXAMPLES = [
   "A habit tracker app where users log daily habits and see streaks",
@@ -23,10 +25,16 @@ export default function PlanPage() {
   const [plans, setPlans] = useState<PlanRecord[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const sync = useSync();
 
   useEffect(() => {
     setPlans(planStore.all());
   }, []);
+
+  // Refresh the list after Firestore merge lands in localStorage.
+  useEffect(() => {
+    if (sync.status === "synced") setPlans(planStore.all());
+  }, [sync.status]);
 
   const generate = async () => {
     if (!idea.trim() || loading) return;
@@ -63,6 +71,7 @@ export default function PlanPage() {
       planStore.save(record);
       setPlans(planStore.all());
       setActiveId(record.id);
+      sync.syncPlan(record);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
@@ -97,7 +106,10 @@ export default function PlanPage() {
 
   return (
     <div className="flex flex-1 flex-col overflow-hidden lg:flex-row">
-      <PlanSidebar plans={plans} activeId={activeId} onSelect={loadPlan} />
+      <div className="flex flex-col">
+        <PlanSidebar plans={plans} activeId={activeId} onSelect={loadPlan} />
+        <SyncIndicator status={sync.status} active={sync.active} />
+      </div>
 
       <div className="flex flex-1 flex-col gap-4 overflow-auto p-4 lg:flex-row lg:overflow-hidden lg:p-6">
         <div className="flex flex-col gap-3 lg:w-1/3">

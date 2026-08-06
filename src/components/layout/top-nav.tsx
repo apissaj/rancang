@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { Hammer } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
+import { AuthButton } from "@/components/layout/auth-button";
 
 const links = [
   { href: "/chat", label: "Chat" },
@@ -35,6 +36,7 @@ export function TopNav() {
             </Link>
           ))}
           <ThemeToggle />
+          <AuthButton />
         </nav>
       </div>
     </header>

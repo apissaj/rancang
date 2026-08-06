@@ -9,6 +9,8 @@ import { ComparisonView, type ComparisonColumn } from "@/components/chat/compari
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { streamChat } from "@/hooks/use-chat-stream";
 import { conversationStore, type Conversation, type ChatMessageRecord } from "@/lib/storage";
+import { useSync } from "@/lib/use-sync";
+import { SyncIndicator } from "@/components/sync-indicator";
 
 export default function ChatPage() {
   const [models, setModels] = useState<string[]>(["auto"]);
@@ -21,6 +23,7 @@ export default function ChatPage() {
   const [streamingId, setStreamingId] = useState<string | null>(null);
   const [comparison, setComparison] = useState<{ prompt: string; columns: ComparisonColumn[] } | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const sync = useSync();
 
   useEffect(() => {
     fetch("/api/models")
@@ -32,6 +35,11 @@ export default function ChatPage() {
       .catch(() => {});
     setConversations(conversationStore.all());
   }, []);
+
+  // Refresh the list after Firestore merge lands in localStorage.
+  useEffect(() => {
+    if (sync.status === "synced") setConversations(conversationStore.all());
+  }, [sync.status]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -47,6 +55,7 @@ export default function ChatPage() {
     };
     conversationStore.save(conversation);
     setConversations(conversationStore.all());
+    sync.syncConversation(conversation);
   };
 
   const newChat = () => {
@@ -66,6 +75,7 @@ export default function ChatPage() {
   const deleteChat = (id: string) => {
     conversationStore.remove(id);
     setConversations(conversationStore.all());
+    sync.deleteConversation(id);
     if (activeId === id) newChat();
   };
 
@@ -141,13 +151,16 @@ export default function ChatPage() {
 
   return (
     <div className="flex flex-1 overflow-hidden">
-      <ChatSidebar
-        conversations={conversations}
-        activeId={activeId}
-        onSelect={selectChat}
-        onNew={newChat}
-        onDelete={deleteChat}
-      />
+      <div className="flex h-full shrink-0 flex-col">
+        <ChatSidebar
+          conversations={conversations}
+          activeId={activeId}
+          onSelect={selectChat}
+          onNew={newChat}
+          onDelete={deleteChat}
+        />
+        <SyncIndicator status={sync.status} active={sync.active} />
+      </div>
 
       <div className="flex flex-1 flex-col overflow-hidden">
         {comparison ? (
