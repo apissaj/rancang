@@ -14,7 +14,7 @@ export function PlanSidebar({
   onSelect: (id: string) => void;
 }) {
   return (
-    <div className="w-full shrink-0 border-b lg:w-64 lg:border-b-0 lg:border-r">
+    <div className="w-full shrink-0 border-b bg-muted/20 lg:w-64 lg:border-b-0 lg:border-r">
       <div className="px-3 py-2 text-xs font-semibold uppercase text-muted-foreground">
         Recent PRDs
       </div>
@@ -25,7 +25,7 @@ export function PlanSidebar({
               key={p.id}
               onClick={() => onSelect(p.id)}
               className={cn(
-                "truncate rounded-md px-2 py-1.5 text-left text-sm hover:bg-accent",
+                "truncate rounded-lg px-2 py-1.5 text-left text-sm transition-colors hover:bg-accent",
                 p.id === activeId && "bg-accent"
               )}
               title={p.title}

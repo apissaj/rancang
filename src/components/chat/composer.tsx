@@ -60,7 +60,7 @@ export function Composer({
   };
 
   return (
-    <div className="border-t p-3">
+    <div className="border-t bg-background/60 p-3">
       <div className="mb-2 flex flex-wrap items-center gap-3">
         <div className="flex items-center gap-2">
           <Switch id="compare-mode" checked={compareMode} onCheckedChange={onCompareModeChange} />

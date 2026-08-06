@@ -16,9 +16,9 @@ export function TopNav() {
   const pathname = usePathname();
 
   return (
-    <header className="sticky top-0 z-40 border-b bg-background/80 backdrop-blur">
+    <header className="sticky top-0 z-40 border-b bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
-        <Link href="/" className="flex items-center gap-2 font-semibold">
+        <Link href="/" className="flex items-center gap-2 text-base font-semibold tracking-tight transition-opacity hover:opacity-80">
           <Hammer className="h-5 w-5" />
           PRD Forge
         </Link>
@@ -28,7 +28,7 @@ export function TopNav() {
               key={link.href}
               href={link.href}
               className={cn(
-                "rounded-md px-3 py-1.5 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground",
+                "rounded-lg px-3 py-1.5 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground",
                 pathname.startsWith(link.href) && "bg-accent text-accent-foreground"
               )}
             >

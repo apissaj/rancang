@@ -12,6 +12,7 @@ import { conversationStore, type Conversation, type ChatMessageRecord } from "@/
 import { useSync } from "@/lib/use-sync";
 import { useAuth } from "@/components/auth-provider";
 import { SyncIndicator } from "@/components/sync-indicator";
+import { AuthGate } from "@/components/auth-gate";
 
 export default function ChatPage() {
   const [models, setModels] = useState<string[]>(["auto"]);
@@ -161,6 +162,7 @@ export default function ChatPage() {
   const busy = streamingId !== null || (comparison ? comparison.columns.some((c) => !c.done) : false);
 
   return (
+    <AuthGate>
     <div className="flex flex-1 overflow-hidden">
       <div className="flex h-full shrink-0 flex-col">
         <ChatSidebar
@@ -207,5 +209,6 @@ export default function ChatPage() {
         </div>
       </div>
     </div>
+    </AuthGate>
   );
 }

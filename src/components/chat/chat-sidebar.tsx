@@ -20,9 +20,9 @@ export function ChatSidebar({
   onDelete: (id: string) => void;
 }) {
   return (
-    <div className="flex h-full w-64 shrink-0 flex-col border-r">
+    <div className="flex h-full w-64 shrink-0 flex-col border-r bg-muted/20">
       <div className="p-2">
-        <Button variant="secondary" className="w-full justify-start gap-2" onClick={onNew}>
+        <Button variant="secondary" className="w-full justify-start gap-2 shadow-sm" onClick={onNew}>
           <Plus className="h-4 w-4" />
           New chat
         </Button>
@@ -33,7 +33,7 @@ export function ChatSidebar({
             <div
               key={c.id}
               className={cn(
-                "group flex items-center justify-between rounded-md px-2 py-1.5 text-sm hover:bg-accent",
+                "group flex items-center justify-between rounded-lg px-2 py-1.5 text-sm transition-colors hover:bg-accent",
                 c.id === activeId && "bg-accent"
               )}
             >

@@ -8,7 +8,7 @@ export default function Home() {
       <h1 className="max-w-2xl text-4xl font-bold tracking-tight sm:text-5xl">
         Two tools, one gateway, zero setup.
       </h1>
-      <p className="mt-4 max-w-xl text-balance text-muted-foreground">
+      <p className="mt-4 max-w-xl text-balance leading-relaxed text-muted-foreground">
         Chat with several models side-by-side, or turn a rough idea into a structured,
         agent-ready PRD in seconds. Everything runs through your own LLM gateway and stays
         in your browser — no accounts, no database.
@@ -16,9 +16,9 @@ export default function Home() {
 
       <div className="mt-12 grid w-full gap-6 sm:grid-cols-2">
         <Link href="/chat" className="group text-left">
-          <Card className="h-full transition-colors group-hover:border-primary">
+          <Card className="h-full shadow-sm transition-all duration-200 group-hover:-translate-y-0.5 group-hover:border-primary group-hover:shadow-md">
             <CardHeader>
-              <MessagesSquare className="h-8 w-8" />
+              <MessagesSquare className="h-8 w-8 text-primary" />
               <CardTitle className="mt-2 text-2xl">Multi-model Chat</CardTitle>
               <CardDescription>
                 Talk to any configured model, or turn on comparison mode to run the same prompt
@@ -34,9 +34,9 @@ export default function Home() {
         </Link>
 
         <Link href="/plan" className="group text-left">
-          <Card className="h-full transition-colors group-hover:border-primary">
+          <Card className="h-full shadow-sm transition-all duration-200 group-hover:-translate-y-0.5 group-hover:border-primary group-hover:shadow-md">
             <CardHeader>
-              <FileText className="h-8 w-8" />
+              <FileText className="h-8 w-8 text-primary" />
               <CardTitle className="mt-2 text-2xl">PRD Generator</CardTitle>
               <CardDescription>
                 Describe an app or feature idea and get a full PRD — goals, user stories,

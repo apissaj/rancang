@@ -11,6 +11,7 @@ import { planStore, type PlanRecord } from "@/lib/storage";
 import { useSync } from "@/lib/use-sync";
 import { useAuth } from "@/components/auth-provider";
 import { SyncIndicator } from "@/components/sync-indicator";
+import { AuthGate } from "@/components/auth-gate";
 
 const EXAMPLES = [
   "A habit tracker app where users log daily habits and see streaks",
@@ -114,6 +115,7 @@ export default function PlanPage() {
   };
 
   return (
+    <AuthGate>
     <div className="flex flex-1 flex-col overflow-hidden lg:flex-row">
       <div className="flex flex-col">
         <PlanSidebar plans={plans} activeId={activeId} onSelect={loadPlan} />
@@ -141,7 +143,7 @@ export default function PlanPage() {
           {error && <p className="text-sm text-destructive">{error}</p>}
         </div>
 
-        <div className="flex flex-1 flex-col overflow-hidden rounded-lg border lg:w-2/3">
+        <div className="flex flex-1 flex-col overflow-hidden rounded-xl border shadow-sm lg:w-2/3">
           <div className="flex items-center justify-between border-b px-4 py-2">
             <span className="text-sm font-medium">Preview</span>
             <div className="flex gap-2">
@@ -167,5 +169,6 @@ export default function PlanPage() {
         </div>
       </div>
     </div>
+    </AuthGate>
   );
 }

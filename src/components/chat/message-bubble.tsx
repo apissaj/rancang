@@ -24,7 +24,7 @@ export function MessageBubble({ message, streaming }: { message: ChatMessageReco
       )}
       <div
         className={cn(
-          "max-w-[85%] rounded-lg px-4 py-2 text-sm",
+          "max-w-[85%] rounded-xl px-4 py-2.5 text-sm shadow-sm",
           isUser ? "bg-primary text-primary-foreground" : "bg-muted"
         )}
       >
