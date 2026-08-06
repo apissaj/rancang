@@ -9,6 +9,7 @@ import { Markdown } from "@/components/markdown";
 import { PlanSidebar } from "@/components/plan/plan-sidebar";
 import { planStore, type PlanRecord } from "@/lib/storage";
 import { useSync } from "@/lib/use-sync";
+import { useAuth } from "@/components/auth-provider";
 import { SyncIndicator } from "@/components/sync-indicator";
 
 const EXAMPLES = [
@@ -26,10 +27,18 @@ export default function PlanPage() {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const sync = useSync();
+  const { storageVersion } = useAuth();
 
+  // Re-read from localStorage whenever the storage scope switches (login/logout),
+  // so a different identity never sees the previous identity's plans. Also covers
+  // first mount (storageVersion starts at 0).
   useEffect(() => {
     setPlans(planStore.all());
-  }, []);
+    setActiveId(null);
+    setIdea("");
+    setMarkdown("");
+    setError(null);
+  }, [storageVersion]);
 
   // Refresh the list after Firestore merge lands in localStorage.
   useEffect(() => {

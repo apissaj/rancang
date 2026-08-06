@@ -10,6 +10,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { streamChat } from "@/hooks/use-chat-stream";
 import { conversationStore, type Conversation, type ChatMessageRecord } from "@/lib/storage";
 import { useSync } from "@/lib/use-sync";
+import { useAuth } from "@/components/auth-provider";
 import { SyncIndicator } from "@/components/sync-indicator";
 
 export default function ChatPage() {
@@ -24,6 +25,7 @@ export default function ChatPage() {
   const [comparison, setComparison] = useState<{ prompt: string; columns: ComparisonColumn[] } | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const sync = useSync();
+  const { storageVersion } = useAuth();
 
   useEffect(() => {
     fetch("/api/models")
@@ -33,8 +35,17 @@ export default function ChatPage() {
         setModel(data.defaultModel);
       })
       .catch(() => {});
-    setConversations(conversationStore.all());
   }, []);
+
+  // Re-read from localStorage whenever the storage scope switches (login/logout),
+  // so a different identity never sees the previous identity's chats. Also covers
+  // first mount (storageVersion starts at 0).
+  useEffect(() => {
+    setConversations(conversationStore.all());
+    setActiveId(null);
+    setMessages([]);
+    setComparison(null);
+  }, [storageVersion]);
 
   // Refresh the list after Firestore merge lands in localStorage.
   useEffect(() => {
