@@ -38,3 +38,6 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 .env.full
+
+# local dev image storage (dev default, not used in prod container)
+/data

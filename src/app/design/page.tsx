@@ -388,13 +388,13 @@ function ResultView({
       const res = await fetch("/api/design/image", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ screen: target, designMd }),
+        body: JSON.stringify({ screen: target, designMd, designId: activeDesign?.id }),
       });
       if (!res.ok) throw new Error((await res.json().catch(() => ({ error: "Image generation failed" }))).error ?? "Image generation failed");
-      const data = (await res.json()) as { image: string };
+      const data = (await res.json()) as { imageUrl: string };
       setGenJustSucceeded(true);
       await new Promise((r) => setTimeout(r, 250));
-      persistScreenImage(screenId, data.image);
+      persistScreenImage(screenId, data.imageUrl);
     } catch (err) {
       setImageError(err instanceof Error ? err.message : "Something went wrong");
     } finally {

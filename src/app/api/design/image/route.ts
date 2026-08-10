@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { generateScreenImage } from "@/lib/image-gen";
 import { extractFrontMatter, resolveTokens } from "@/lib/design-yaml";
+import { saveImage } from "@/lib/image-storage";
 import type { Screen } from "@/lib/storage";
 
 export const dynamic = "force-dynamic";
@@ -42,20 +43,22 @@ function buildPrompt(screen: Screen, designMd: string, styleHint?: string): stri
 }
 
 export async function POST(req: Request) {
-  const { screen, designMd, styleHint } = (await req.json()) as {
+  const { screen, designMd, styleHint, designId } = (await req.json()) as {
     screen: Screen;
     designMd: string;
     styleHint?: string;
+    designId?: string;
   };
 
-  if (!screen || !designMd) {
-    return NextResponse.json({ error: "screen and designMd are required" }, { status: 400 });
+  if (!screen || !designMd || !designId) {
+    return NextResponse.json({ error: "screen, designMd and designId are required" }, { status: 400 });
   }
 
   try {
     const prompt = buildPrompt(screen, designMd, styleHint);
     const image = await generateScreenImage(prompt);
-    return NextResponse.json({ image });
+    const imageUrl = await saveImage(designId, screen.id, image);
+    return NextResponse.json({ imageUrl });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     return NextResponse.json({ error: message }, { status: 502 });

@@ -42,5 +42,11 @@ COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 
+# Generated hi-fi mockup PNGs live here. Must be backed by a persistent bind mount
+# (docker run -v /host/path:/app/data/images) or images are lost on container replacement.
+ENV IMAGE_STORAGE_DIR=/app/data/images
+RUN mkdir -p /app/data/images
+VOLUME /app/data/images
+
 EXPOSE 3000
 CMD ["node", "server.js"]
