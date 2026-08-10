@@ -94,3 +94,43 @@ export const planStore = {
     write(planKey(), all.slice(0, PLAN_LIMIT));
   },
 };
+
+export type ScreenComponent = { type: string; label: string; onClick?: string };
+export type Screen = { id: string; name: string; platform: "mobile" | "web"; components: ScreenComponent[] };
+
+export type DesignVersion = {
+  id: string;
+  designMd: string;
+  screens: Screen[];
+  createdAt: number;
+  source: "generated" | "manual-edit" | "ai-edit";
+  note?: string;
+};
+
+export type DesignRecord = {
+  id: string;
+  title: string;
+  sourceIdea: string;
+  sourcePlanId?: string;
+  platform: "mobile" | "web" | "both";
+  pwa: boolean;
+  designMd: string;
+  screens: Screen[];
+  createdAt: number;
+  versions: DesignVersion[];
+};
+
+const DESIGN_LIMIT = 5;
+
+function designKey() {
+  return `prd-forge:${scope}:designs`;
+}
+
+export const designStore = {
+  all: () => read<DesignRecord>(designKey()).sort((a, b) => b.createdAt - a.createdAt),
+  save: (design: DesignRecord) => {
+    const all = read<DesignRecord>(designKey()).filter((d) => d.id !== design.id);
+    all.unshift(design);
+    write(designKey(), all.slice(0, DESIGN_LIMIT));
+  },
+};
