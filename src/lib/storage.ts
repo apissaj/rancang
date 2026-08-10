@@ -59,7 +59,13 @@ function read<T>(key: string): T[] {
 
 function write<T>(key: string, value: T[]) {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(key, JSON.stringify(value));
+  try {
+    window.localStorage.setItem(key, JSON.stringify(value));
+  } catch (err) {
+    // Quota exceeded (old data-URL images, etc). Don't crash the app — surface in console,
+    // let the caller's data live in memory for this session even if it can't persist.
+    console.error(`localStorage write failed for "${key}"`, err);
+  }
 }
 
 export const conversationStore = {
