@@ -34,14 +34,14 @@ function buildUserMessage(idea: string, answers?: Answer[]): string {
 }
 
 export async function POST(req: Request) {
-  const { idea, answers } = (await req.json()) as { idea: string; answers?: Answer[] };
+  const { idea, answers, model } = (await req.json()) as { idea: string; answers?: Answer[]; model?: string };
 
   if (!idea || !idea.trim()) {
     return new Response("idea is required", { status: 400 });
   }
 
   try {
-    const upstream = await streamChatCompletion(getDefaultModel(), [
+    const upstream = await streamChatCompletion(model || getDefaultModel(), [
       { role: "system", content: SYSTEM_PROMPT },
       { role: "user", content: buildUserMessage(idea, answers) },
     ]);

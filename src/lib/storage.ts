@@ -96,7 +96,13 @@ export const planStore = {
 };
 
 export type ScreenComponent = { type: string; label: string; onClick?: string };
-export type Screen = { id: string; name: string; platform: "mobile" | "web"; components: ScreenComponent[] };
+export type Screen = {
+  id: string;
+  name: string;
+  platform: "mobile" | "web";
+  components: ScreenComponent[];
+  generatedImage?: string; // data: URL, cached once generated so we don't regenerate on every view
+};
 
 export type DesignVersion = {
   id: string;

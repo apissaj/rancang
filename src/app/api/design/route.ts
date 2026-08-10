@@ -24,12 +24,27 @@ Front matter rules:
 - version: alpha
 - name: <design name>, description: <one line>
 - colors: primary, secondary, tertiary, neutral as quoted hex strings, e.g. "#1A1C1E"
+  COLOR ROLE DISCIPLINE (critical — this is the #1 cause of unreadable mockups, follow strictly):
+  - "neutral" is the dominant SURFACE color (page/card background) — pick a near-white (light theme)
+    or near-black (dark theme) value. It is NEVER used as a text or accent color.
+  - "primary"/"secondary"/"tertiary" are ACCENT colors used SPARINGLY — for buttons, active states,
+    icons, borders, and highlights only. They are NOT used for body text, paragraphs, or large blocks
+    of readable content — regular text must always read clearly against "neutral" (near-black text on
+    a light neutral, or near-white text on a dark neutral), never in a bright accent hue.
+  - Every accent color MUST have strong contrast against both white (#FFFFFF) text and black (#000000)
+    text for at least one of them (WCAG AA, 4.5:1+) — avoid pastel/light accents like yellow or light
+    orange as a button background with white text on top (classic failure: light-yellow bg + white
+    text is unreadable). If in doubt, use a darker, more saturated shade of the accent for anything
+    text sits on top of.
+  - Pick ONE overall theme (light OR dark), not a mix — neutral sets the theme, don't fight it with
+    text colors from the opposite theme.
 - typography: named styles (h1, h2, body-md, etc.) each an inline map: fontFamily, fontSize, fontWeight, lineHeight, letterSpacing
 - rounded: sm/md/lg px values
 - spacing: sm/md/lg px values
 - components: named component tokens (e.g. button-primary) as nested maps referencing other tokens with
   "{colors.primary}" dotted-path syntax; hover/active variants are separate SIBLING keys like
-  button-primary-hover, never nested inside the base component.
+  button-primary-hover, never nested inside the base component. Every component with a background color
+  MUST also define a "text" color chosen for contrast against that background (do not default to white).
 
 In the "## Layout" section, note responsive breakpoints if platform is "both". If pwa is true, add
 manifest/service-worker/installable guidance to "## Overview" or "## Do's and Don'ts".

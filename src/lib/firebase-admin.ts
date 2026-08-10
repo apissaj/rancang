@@ -31,6 +31,15 @@ export function getAdminAuth() {
   return getAuth();
 }
 
+let dbConfigured = false;
+
 export function getAdminDb() {
-  return getFirestore();
+  const db = getFirestore();
+  // NAS/tunnel network drops long-lived gRPC (HTTP/2) streams -> DEADLINE_EXCEEDED after 60s.
+  // Force REST transport (plain HTTPS request/response) instead. Must be set before first use.
+  if (!dbConfigured) {
+    dbConfigured = true;
+    db.settings({ preferRest: true });
+  }
+  return db;
 }

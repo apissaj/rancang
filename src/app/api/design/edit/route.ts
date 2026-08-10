@@ -13,6 +13,12 @@ no preamble/commentary. Preserve the Google DESIGN.md format (YAML front matter 
 sections: Overview, Colors, Typography, Layout, Elevation & Depth, Shapes, Components, Do's and Don'ts)
 and the screens' id/onClick linking unless the instruction asks to change them.
 
+Color role discipline (preserve unless instruction explicitly asks to change the palette): "neutral" is
+the surface/background color, never used for body text or accents. "primary"/"secondary"/"tertiary" are
+accents used sparingly for buttons/highlights/borders only, never for large blocks of body text. Every
+accent used as a button/component background must contrast well (WCAG AA) against its paired text color
+— avoid light/pastel accents (e.g. yellow) with white text on top.
+
 Output ONLY valid JSON, no markdown code fences, matching exactly:
 { "designMd": "...", "screens": [ { "id": "...", "name": "...", "platform": "mobile" | "web", "components": [ { "type": "...", "label": "...", "onClick": "..." } ] } ] }`;
 

@@ -12,7 +12,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Markdown } from "@/components/markdown";
 import { DesignSidebar } from "@/components/design/design-sidebar";
-import { WireframeCanvas } from "@/components/design/wireframe-canvas";
+import { WireframeCanvas, MockupCanvas } from "@/components/design/wireframe-canvas";
 import { designStore, planStore, type DesignRecord, type DesignVersion, type Screen } from "@/lib/storage";
 import { useSync } from "@/lib/use-sync";
 import { useAuth } from "@/components/auth-provider";
@@ -277,6 +277,38 @@ function SetupForm({
   );
 }
 
+const GENERATION_STAGE_LABELS = [
+  "Composing prompt from your design tokens...",
+  "Rendering UI mockup...",
+  "Finalizing image...",
+];
+
+// Estimated (not real) progress: no streaming signal from the image gateway, so this is a
+// client-side asymptotic curve calibrated against a ~50-58s typical generation time.
+function GenerationProgress({ startedAt, justSucceeded }: { startedAt: number; justSucceeded: boolean }) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 250);
+    return () => clearInterval(id);
+  }, []);
+  const elapsedSeconds = Math.max(0, (now - startedAt) / 1000);
+  const progress = justSucceeded ? 100 : Math.min(99, 100 * (1 - Math.exp(-elapsedSeconds / 25)));
+  const stageLabel = GENERATION_STAGE_LABELS[Math.floor(elapsedSeconds / 5) % GENERATION_STAGE_LABELS.length];
+  return (
+    <div className="flex w-full max-w-xs flex-col gap-1.5">
+      <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+        <div
+          className="h-full rounded-full bg-primary transition-[width] duration-200 ease-linear"
+          style={{ width: `${progress}%` }}
+        />
+      </div>
+      <p className="text-xs text-muted-foreground">
+        {Math.floor(elapsedSeconds)}s &middot; {stageLabel}
+      </p>
+    </div>
+  );
+}
+
 function ResultView({
   idea,
   vibe,
@@ -309,6 +341,12 @@ function ResultView({
   const [currentScreenId, setCurrentScreenId] = useState<{ mobile?: string; web?: string }>({});
   const [copied, setCopied] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
+  const [viewMode, setViewMode] = useState<"wireframe" | "hifi">("wireframe");
+  const [generatingId, setGeneratingId] = useState<string | null>(null);
+  const [imageError, setImageError] = useState<string | null>(null);
+  const [bulkProgress, setBulkProgress] = useState<{ done: number; total: number } | null>(null);
+  const [genStartedAt, setGenStartedAt] = useState<number | null>(null);
+  const [genJustSucceeded, setGenJustSucceeded] = useState(false);
 
   const [editing, setEditing] = useState(false);
   const [editDraft, setEditDraft] = useState("");
@@ -326,6 +364,55 @@ function ResultView({
     if (tabScreens.some((s) => s.id === id)) {
       setCurrentScreenId((prev) => ({ ...prev, [activeTab]: id }));
     }
+  };
+
+  const persistScreenImage = (screenId: string, image: string) => {
+    const updatedScreens = screens.map((s) => (s.id === screenId ? { ...s, generatedImage: image } : s));
+    setScreens(updatedScreens);
+    if (!activeDesign) return;
+    const lastIdx = activeDesign.versions.length - 1;
+    const updatedVersions = activeDesign.versions.map((v, i) => (i === lastIdx ? { ...v, screens: updatedScreens } : v));
+    const updated: DesignRecord = { ...activeDesign, screens: updatedScreens, versions: updatedVersions };
+    designStore.save(updated);
+    sync.syncDesign(updated);
+    setDesigns(designStore.all());
+  };
+
+  const generateImage = async (screenId: string) => {
+    const target = screens.find((s) => s.id === screenId);
+    if (!target) return;
+    setGeneratingId(screenId);
+    setImageError(null);
+    setGenStartedAt(Date.now());
+    try {
+      const res = await fetch("/api/design/image", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ screen: target, designMd }),
+      });
+      if (!res.ok) throw new Error((await res.json().catch(() => ({ error: "Image generation failed" }))).error ?? "Image generation failed");
+      const data = (await res.json()) as { image: string };
+      setGenJustSucceeded(true);
+      await new Promise((r) => setTimeout(r, 250));
+      persistScreenImage(screenId, data.image);
+    } catch (err) {
+      setImageError(err instanceof Error ? err.message : "Something went wrong");
+    } finally {
+      setGeneratingId(null);
+      setGenStartedAt(null);
+      setGenJustSucceeded(false);
+    }
+  };
+
+  const generateAllForTab = async () => {
+    const pending = tabScreens.filter((s) => !s.generatedImage);
+    if (pending.length === 0) return;
+    setBulkProgress({ done: 0, total: pending.length });
+    for (let i = 0; i < pending.length; i++) {
+      await generateImage(pending[i].id);
+      setBulkProgress({ done: i + 1, total: pending.length });
+    }
+    setBulkProgress(null);
   };
 
   const versions = activeDesign?.versions ?? [];
@@ -480,9 +567,60 @@ function ResultView({
             </Select>
           </div>
 
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex gap-1 rounded-lg border p-1 w-fit">
+              {((["wireframe", "hifi"] as const)).map((m) => (
+                <button
+                  key={m}
+                  onClick={() => setViewMode(m)}
+                  className={`rounded-md px-3 py-1 text-sm transition-colors ${viewMode === m ? "bg-accent" : "hover:bg-accent/50"}`}
+                >
+                  {m === "wireframe" ? "Wireframe" : "Hi-fi mockup"}
+                </button>
+              ))}
+            </div>
+            {viewMode === "hifi" && (
+              <Button variant="outline" size="sm" onClick={generateAllForTab} disabled={!!bulkProgress || !!generatingId}>
+                {bulkProgress ? `Generating ${bulkProgress.done}/${bulkProgress.total}...` : "Generate all screens"}
+              </Button>
+            )}
+            {bulkProgress && generatingId && genStartedAt && (
+              <GenerationProgress startedAt={genStartedAt} justSucceeded={genJustSucceeded} />
+            )}
+          </div>
+          {imageError && <p className="text-sm text-destructive">{imageError}</p>}
+
           <div className="flex flex-1 items-start justify-center overflow-auto rounded-xl border bg-muted/10 p-6">
-            {currentScreen && designMd && (
+            {currentScreen && designMd && viewMode === "wireframe" && (
               <WireframeCanvas screen={currentScreen} designMd={designMd} pwa={pwa} onNavigate={navigate} />
+            )}
+            {currentScreen && designMd && viewMode === "hifi" && (
+              <div className="flex flex-col items-center gap-3">
+                {currentScreen.generatedImage ? (
+                  <>
+                    <MockupCanvas screen={currentScreen} designMd={designMd} image={currentScreen.generatedImage} />
+                    <Button variant="outline" size="sm" onClick={() => generateImage(currentScreen.id)} disabled={generatingId === currentScreen.id}>
+                      {generatingId === currentScreen.id && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                      {generatingId === currentScreen.id ? "Regenerating..." : "Regenerate"}
+                    </Button>
+                    {generatingId === currentScreen.id && genStartedAt && !bulkProgress && (
+                      <GenerationProgress startedAt={genStartedAt} justSucceeded={genJustSucceeded} />
+                    )}
+                  </>
+                ) : (
+                  <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed p-8 text-center">
+                    <Button onClick={() => generateImage(currentScreen.id)} disabled={generatingId === currentScreen.id}>
+                      {generatingId === currentScreen.id && <Loader2 className="h-4 w-4 animate-spin" />}
+                      {generatingId === currentScreen.id ? "Generating..." : "Generate mockup image"}
+                    </Button>
+                    {generatingId === currentScreen.id && genStartedAt && !bulkProgress ? (
+                      <GenerationProgress startedAt={genStartedAt} justSucceeded={genJustSucceeded} />
+                    ) : (
+                      <p className="text-xs text-muted-foreground">May take up to a minute.</p>
+                    )}
+                  </div>
+                )}
+              </div>
             )}
           </div>
         </div>
