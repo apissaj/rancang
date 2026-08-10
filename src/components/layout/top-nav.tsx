@@ -28,7 +28,7 @@ export function TopNav() {
               key={link.href}
               href={link.href}
               className={cn(
-                "rounded-lg px-3 py-1.5 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground",
+                "rounded-lg px-3 py-1.5 text-sm font-medium outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:ring-3 focus-visible:ring-ring/50",
                 pathname.startsWith(link.href) && "bg-accent text-accent-foreground"
               )}
             >

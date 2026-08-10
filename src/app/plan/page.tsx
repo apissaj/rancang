@@ -7,7 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Markdown } from "@/components/markdown";
 import { PlanSidebar } from "@/components/plan/plan-sidebar";
+import { ClarifyQuestions, type QuestionAnswers } from "@/components/plan/clarify-questions";
 import { planStore, type PlanRecord } from "@/lib/storage";
+import type { ClarifyResponse } from "@/lib/clarify-types";
 import { useSync } from "@/lib/use-sync";
 import { useAuth } from "@/components/auth-provider";
 import { SyncIndicator } from "@/components/sync-indicator";
@@ -27,6 +29,8 @@ export default function PlanPage() {
   const [plans, setPlans] = useState<PlanRecord[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [clarifying, setClarifying] = useState(false);
+  const [clarify, setClarify] = useState<ClarifyResponse | null>(null);
   const sync = useSync();
   const { storageVersion } = useAuth();
 
@@ -39,6 +43,7 @@ export default function PlanPage() {
     setIdea("");
     setMarkdown("");
     setError(null);
+    setClarify(null);
   }, [storageVersion]);
 
   // Refresh the list after Firestore merge lands in localStorage.
@@ -46,18 +51,18 @@ export default function PlanPage() {
     if (sync.status === "synced") setPlans(planStore.all());
   }, [sync.status]);
 
-  const generate = async () => {
-    if (!idea.trim() || loading) return;
+  const generatePrd = async (answers?: Array<{ question: string; selected: string[]; note?: string }>) => {
     setLoading(true);
     setError(null);
     setMarkdown("");
     setActiveId(null);
+    setClarify(null);
 
     try {
       const res = await fetch("/api/plan", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ idea }),
+        body: JSON.stringify({ idea, answers }),
       });
       if (!res.ok || !res.body) throw new Error(await res.text());
 
@@ -82,11 +87,47 @@ export default function PlanPage() {
       setPlans(planStore.all());
       setActiveId(record.id);
       sync.syncPlan(record);
+      setIdea("");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
       setLoading(false);
     }
+  };
+
+  const startGenerate = async () => {
+    if (!idea.trim() || loading || clarifying) return;
+    setClarifying(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/plan/clarify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ idea }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      const data = (await res.json()) as ClarifyResponse;
+      if (data.questions?.length > 0) {
+        setClarify(data);
+      } else {
+        await generatePrd();
+      }
+    } catch (err) {
+      console.warn("Clarify step failed, falling back to direct generation:", err);
+      await generatePrd();
+    } finally {
+      setClarifying(false);
+    }
+  };
+
+  const submitAnswers = (answers: QuestionAnswers) => {
+    if (!clarify) return;
+    const payload = clarify.questions.map((q) => ({
+      question: q.question,
+      selected: answers[q.id]?.selected ?? [],
+      note: answers[q.id]?.note,
+    }));
+    generatePrd(payload);
   };
 
   const loadPlan = (id: string) => {
@@ -96,6 +137,7 @@ export default function PlanPage() {
     setIdea(plan.idea);
     setMarkdown(plan.markdown);
     setError(null);
+    setClarify(null);
   };
 
   const copyMarkdown = async () => {
@@ -135,12 +177,23 @@ export default function PlanPage() {
             onChange={(e) => setIdea(e.target.value)}
             placeholder={`e.g. "${EXAMPLES[0]}"\n\nOther ideas:\n- ${EXAMPLES[1]}\n- ${EXAMPLES[2]}`}
             className="min-h-[200px] resize-none"
+            disabled={!!clarify}
           />
-          <Button onClick={generate} disabled={loading || !idea.trim()}>
-            {loading && <Loader2 className="h-4 w-4 animate-spin" />}
-            {loading ? "Generating..." : "Generate PRD"}
-          </Button>
+          {!clarify && (
+            <Button onClick={startGenerate} disabled={loading || clarifying || !idea.trim()}>
+              {(loading || clarifying) && <Loader2 className="h-4 w-4 animate-spin" />}
+              {clarifying ? "Analyzing your idea..." : loading ? "Generating..." : "Generate PRD"}
+            </Button>
+          )}
           {error && <p className="text-sm text-destructive">{error}</p>}
+          {clarify && (
+            <ClarifyQuestions
+              clarify={clarify}
+              onSubmit={submitAnswers}
+              onSkip={() => generatePrd()}
+              submitting={loading}
+            />
+          )}
         </div>
 
         <div className="flex flex-1 flex-col overflow-hidden rounded-xl border shadow-sm lg:w-2/3">

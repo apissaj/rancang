@@ -29,6 +29,35 @@ export async function streamChatCompletion(model: string, messages: ChatMessage[
 }
 
 /**
+ * Calls the chat completions endpoint non-streaming and returns the full
+ * assistant text. For one-shot structured (e.g. JSON) responses.
+ */
+export async function chatCompletion(model: string, messages: ChatMessage[]): Promise<string> {
+  const baseUrl = process.env.LLM_BASE_URL;
+  const apiKey = process.env.LLM_API_KEY;
+  if (!baseUrl) throw new Error("LLM_BASE_URL is not configured");
+
+  const res = await fetch(`${baseUrl.replace(/\/$/, "")}/chat/completions`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
+    },
+    body: JSON.stringify({ model, messages, stream: false }),
+  });
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(`LLM gateway error (${res.status}): ${text || res.statusText}`);
+  }
+
+  const json = await res.json();
+  const content: string | undefined = json.choices?.[0]?.message?.content;
+  if (!content) throw new Error("LLM gateway returned no content");
+  return content;
+}
+
+/**
  * Transforms an upstream OpenAI-style SSE stream (data: {...}\n\n) into a
  * plain text stream of token deltas, so the client doesn't need an SSE parser.
  */

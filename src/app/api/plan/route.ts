@@ -22,8 +22,19 @@ Rules:
 - Be specific to the idea given. Do not use placeholder text like "TBD".
 - Output only the Markdown document, no preamble or commentary.`;
 
+type Answer = { question: string; selected: string[]; note?: string };
+
+function buildUserMessage(idea: string, answers?: Answer[]): string {
+  if (!answers || answers.length === 0) return idea;
+  const lines = answers.map((a) => {
+    const detail = a.note ? ` (${a.note})` : "";
+    return `- ${a.question}: ${a.selected.join(", ")}${detail}`;
+  });
+  return `Clarifying answers:\n${lines.join("\n")}\n\nIdea:\n${idea}`;
+}
+
 export async function POST(req: Request) {
-  const { idea } = (await req.json()) as { idea: string };
+  const { idea, answers } = (await req.json()) as { idea: string; answers?: Answer[] };
 
   if (!idea || !idea.trim()) {
     return new Response("idea is required", { status: 400 });
@@ -32,7 +43,7 @@ export async function POST(req: Request) {
   try {
     const upstream = await streamChatCompletion(getDefaultModel(), [
       { role: "system", content: SYSTEM_PROMPT },
-      { role: "user", content: idea },
+      { role: "user", content: buildUserMessage(idea, answers) },
     ]);
     return new Response(toTextDeltaStream(upstream.body!), {
       headers: { "Content-Type": "text/plain; charset=utf-8" },

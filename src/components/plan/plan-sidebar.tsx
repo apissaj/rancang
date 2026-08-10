@@ -25,7 +25,7 @@ export function PlanSidebar({
               key={p.id}
               onClick={() => onSelect(p.id)}
               className={cn(
-                "truncate rounded-lg px-2 py-1.5 text-left text-sm transition-colors hover:bg-accent",
+                "truncate rounded-lg px-2 py-1.5 text-left text-sm outline-none transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring/50",
                 p.id === activeId && "bg-accent"
               )}
               title={p.title}
