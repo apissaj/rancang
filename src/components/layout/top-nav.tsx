@@ -10,6 +10,7 @@ import { AuthButton } from "@/components/layout/auth-button";
 const links = [
   { href: "/chat", label: "Chat" },
   { href: "/plan", label: "Plan" },
+  { href: "/design", label: "Design" },
 ];
 
 export function TopNav() {
