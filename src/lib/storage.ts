@@ -12,12 +12,21 @@ export type Conversation = {
   messages: ChatMessageRecord[];
 };
 
+export type PlanVersion = {
+  id: string;
+  markdown: string;
+  createdAt: number;
+  source: "generated" | "manual-edit" | "ai-edit";
+  note?: string;
+};
+
 export type PlanRecord = {
   id: string;
   title: string;
   idea: string;
   markdown: string;
   createdAt: number;
+  versions: PlanVersion[];
 };
 
 const PLAN_LIMIT = 5;
@@ -67,10 +76,20 @@ export const conversationStore = {
   },
 };
 
+// Old localStorage records predate the `versions` field; synthesize a single
+// v1 entry from markdown/createdAt so they load without crashing.
+function migratePlan(p: PlanRecord & { versions?: PlanVersion[] }): PlanRecord {
+  if (p.versions && p.versions.length > 0) return p as PlanRecord;
+  return {
+    ...p,
+    versions: [{ id: `${p.id}-v1`, markdown: p.markdown, createdAt: p.createdAt, source: "generated" }],
+  };
+}
+
 export const planStore = {
-  all: () => read<PlanRecord>(planKey()).sort((a, b) => b.createdAt - a.createdAt),
+  all: () => read<PlanRecord>(planKey()).map(migratePlan).sort((a, b) => b.createdAt - a.createdAt),
   save: (plan: PlanRecord) => {
-    const all = read<PlanRecord>(planKey()).filter((p) => p.id !== plan.id);
+    const all = read<PlanRecord>(planKey()).map(migratePlan).filter((p) => p.id !== plan.id);
     all.unshift(plan);
     write(planKey(), all.slice(0, PLAN_LIMIT));
   },
