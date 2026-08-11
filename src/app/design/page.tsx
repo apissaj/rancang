@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { nanoid } from "nanoid";
-import { Check, Copy, Download, Loader2, ChevronLeft } from "lucide-react";
+import { Check, Copy, Download, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -366,8 +366,17 @@ function ResultView({
     }
   };
 
+  // Ref mirrors the latest `screens` so sequential calls within the same bulk-generate loop
+  // (generateAllForTab awaits generateImage in a for-loop) don't each build off a stale closure
+  // of `screens` captured at render time — without this, each finished image overwrote the
+  // previous one's result back to "ungenerated" because setScreens is async and the loop body
+  // doesn't wait for a re-render between iterations.
+  const screensRef = useRef(screens);
+  screensRef.current = screens;
+
   const persistScreenImage = (screenId: string, image: string) => {
-    const updatedScreens = screens.map((s) => (s.id === screenId ? { ...s, generatedImage: image } : s));
+    const updatedScreens = screensRef.current.map((s) => (s.id === screenId ? { ...s, generatedImage: image } : s));
+    screensRef.current = updatedScreens;
     setScreens(updatedScreens);
     if (!activeDesign) return;
     const lastIdx = activeDesign.versions.length - 1;
@@ -565,6 +574,14 @@ function ResultView({
                 ))}
               </SelectContent>
             </Select>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={currentIndex < 0 || currentIndex >= tabScreens.length - 1}
+              onClick={() => navigate(tabScreens[currentIndex + 1]?.id)}
+            >
+              Next <ChevronRight className="h-3.5 w-3.5" />
+            </Button>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
