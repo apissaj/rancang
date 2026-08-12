@@ -387,7 +387,7 @@ function ResultView({
     setDesigns(designStore.all());
   };
 
-  const generateImage = async (screenId: string) => {
+  const generateImage = async (screenId: string, attempt = 1): Promise<void> => {
     const target = screens.find((s) => s.id === screenId);
     if (!target) return;
     setGeneratingId(screenId);
@@ -405,6 +405,14 @@ function ResultView({
       await new Promise((r) => setTimeout(r, 250));
       persistScreenImage(screenId, data.imageUrl);
     } catch (err) {
+      // "Failed to fetch" / TypeError = network drop (common on mobile: tab backgrounded mid-request
+      // during the 60-120s generation, or a flaky connection). Retry once automatically before
+      // surfacing an error, since the image-gen call itself is idempotent (just re-renders the prompt).
+      const isNetworkError = err instanceof TypeError;
+      if (isNetworkError && attempt < 2) {
+        await new Promise((r) => setTimeout(r, 1500));
+        return generateImage(screenId, attempt + 1);
+      }
       setImageError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
       setGeneratingId(null);

@@ -39,7 +39,32 @@ export function getAdminDb() {
   // Force REST transport (plain HTTPS request/response) instead. Must be set before first use.
   if (!dbConfigured) {
     dbConfigured = true;
-    db.settings({ preferRest: true });
+    db.settings({ preferRest: true, ignoreUndefinedProperties: true });
   }
   return db;
+}
+
+/**
+ * Strips legacy base64 data-URL images (anything starting with "data:") from a design's screens
+ * before writing to Firestore. Pre-v1.2.0 designs may still have multi-megabyte data-URLs cached
+ * in generatedImage; Firestore's REST transport rejects documents with large strings nested in
+ * arrays with an opaque "Property array contains an invalid nested entity" error, silently
+ * breaking the whole sync (not just that field) — better to drop the stale field than fail the
+ * write. New generations always produce small /api/images/... URL paths, unaffected by this.
+ */
+export function sanitizeDesignForFirestore<T extends { screens?: unknown[]; versions?: { screens?: unknown[] }[] }>(design: T): T {
+  const stripDataUrls = (screens: unknown[] | undefined) =>
+    screens?.map((s) => {
+      const screen = s as { generatedImage?: string };
+      if (typeof screen.generatedImage === "string" && screen.generatedImage.startsWith("data:")) {
+        const { generatedImage: _drop, ...rest } = screen;
+        return rest;
+      }
+      return screen;
+    });
+  return {
+    ...design,
+    screens: stripDataUrls(design.screens) ?? design.screens,
+    versions: design.versions?.map((v) => ({ ...v, screens: stripDataUrls(v.screens) ?? v.screens })),
+  };
 }

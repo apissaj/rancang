@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireUid } from "@/lib/sync-auth";
-import { getAdminDb } from "@/lib/firebase-admin";
+import { getAdminDb, sanitizeDesignForFirestore } from "@/lib/firebase-admin";
 import type { DesignRecord } from "@/lib/storage";
 
 export async function GET(req: NextRequest) {
@@ -18,6 +18,11 @@ export async function POST(req: NextRequest) {
   if (!design?.id) {
     return NextResponse.json({ error: "Missing design.id" }, { status: 400 });
   }
-  await getAdminDb().collection("users").doc(check.uid).collection("designs").doc(design.id).set(design);
+  await getAdminDb()
+    .collection("users")
+    .doc(check.uid)
+    .collection("designs")
+    .doc(design.id)
+    .set(sanitizeDesignForFirestore(design));
   return NextResponse.json({ ok: true });
 }
