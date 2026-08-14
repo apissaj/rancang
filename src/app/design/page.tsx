@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { nanoid } from "nanoid";
 import { Check, Copy, Download, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,7 @@ import { Markdown } from "@/components/markdown";
 import { DesignSidebar } from "@/components/design/design-sidebar";
 import { WireframeCanvas, MockupCanvas } from "@/components/design/wireframe-canvas";
 import { designStore, planStore, type DesignRecord, type DesignVersion, type Screen } from "@/lib/storage";
+import { buildHifiReadme, buildWireframeExport, planLabel, screenFileName } from "@/lib/design-export";
 import { useSync } from "@/lib/use-sync";
 import { useAuth } from "@/components/auth-provider";
 import { SyncIndicator } from "@/components/sync-indicator";
@@ -42,15 +43,34 @@ export default function DesignPage() {
   const { storageVersion } = useAuth();
   const plans = planStore.all();
 
-  useEffect(() => {
-    setDesigns(designStore.all());
+  // Clears the working state back to a blank setup form. Used both by the manual
+  // "New design" button and by the storageVersion effect (identity switch).
+  const resetToSetup = useCallback(() => {
     setActiveId(null);
     setIdea("");
+    setSourcePlanId("none");
+    setVibe("");
+    setPlatform("mobile");
+    setPwa(false);
     setDesignMd("");
     setScreens([]);
     setError(null);
     setShowSetup(true);
-  }, [storageVersion]);
+  }, []);
+
+  useEffect(() => {
+    setDesigns(designStore.all());
+    resetToSetup();
+  }, [storageVersion, resetToSetup]);
+
+  const deleteDesign = (id: string) => {
+    const target = designStore.all().find((d) => d.id === id);
+    if (!window.confirm(`Delete "${target?.title ?? "this design"}"? This can't be undone.`)) return;
+    designStore.remove(id);
+    setDesigns(designStore.all());
+    sync.deleteDesignRemote(id);
+    if (activeId === id) resetToSetup();
+  };
 
   useEffect(() => {
     if (sync.status === "synced") setDesigns(designStore.all());
@@ -116,7 +136,13 @@ export default function DesignPage() {
     <AuthGate>
       <div className="flex flex-1 flex-col overflow-hidden lg:flex-row">
         <div className="flex flex-col">
-          <DesignSidebar designs={designs} activeId={activeId} onSelect={loadDesign} />
+          <DesignSidebar
+            designs={designs}
+            activeId={activeId}
+            onSelect={loadDesign}
+            onNewDesign={resetToSetup}
+            onDelete={deleteDesign}
+          />
           <SyncIndicator status={sync.status} active={sync.active} />
         </div>
 
@@ -182,7 +208,7 @@ function SetupForm({
   setIdea: (v: string) => void;
   sourcePlanId: string;
   setSourcePlanId: (v: string) => void;
-  plans: { id: string; title: string; markdown: string }[];
+  plans: { id: string; title: string; idea?: string; markdown: string }[];
   vibe: string;
   setVibe: (v: string) => void;
   platform: Platform;
@@ -195,6 +221,14 @@ function SetupForm({
   hasResult: boolean;
   onBackToResult: () => void;
 }) {
+  // Base UI's <SelectValue> resolves the trigger label from the Root's `items` prop — NOT from
+  // the rendered <SelectItem> children. Without `items` it stringifies the raw value, which is
+  // why the trigger showed a bare nanoid. planLabel() also guards against a blank title.
+  const planItems = [
+    { value: "none", label: "None (write idea manually)" },
+    ...plans.map((p) => ({ value: p.id, label: planLabel(p) })),
+  ];
+
   return (
     <div className="flex flex-1 flex-col gap-4 overflow-auto p-4 lg:p-6">
       <div className="mx-auto flex w-full max-w-xl flex-col gap-4">
@@ -213,15 +247,14 @@ function SetupForm({
         {plans.length > 0 && (
           <div className="flex flex-col gap-1.5">
             <Label className="text-xs">Start from an existing PRD (optional)</Label>
-            <Select value={sourcePlanId} onValueChange={(v) => v && setSourcePlanId(v)}>
+            <Select value={sourcePlanId} onValueChange={(v) => v && setSourcePlanId(v)} items={planItems}>
               <SelectTrigger className="h-9 w-full">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="none">None (write idea manually)</SelectItem>
-                {plans.map((p) => (
-                  <SelectItem key={p.id} value={p.id}>
-                    {p.title}
+                {planItems.map((item) => (
+                  <SelectItem key={item.value} value={item.value}>
+                    {item.label}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -354,6 +387,8 @@ function ResultView({
   const [aiEditing, setAiEditing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [viewingVersionId, setViewingVersionId] = useState<string | null>(null);
+  const [exportingZip, setExportingZip] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
 
   const tabScreens = screens.filter((s) => s.platform === activeTab);
   const currentId = currentScreenId[activeTab] ?? tabScreens[0]?.id;
@@ -442,6 +477,13 @@ function ResultView({
   const viewedVersion = viewingVersionId ? versions.find((v) => v.id === viewingVersionId) ?? null : null;
   const displayedMd = viewedVersion ? viewedVersion.designMd : designMd;
 
+  // See the note in SetupForm: Base UI needs `items` to label the trigger, else it shows raw ids.
+  const screenItems = tabScreens.map((s) => ({ value: s.id, label: s.name }));
+  const versionItems = [...versions].reverse().map((v) => {
+    const idx = versions.findIndex((x) => x.id === v.id);
+    return { value: idx === versions.length - 1 ? "current" : v.id, label: versionLabel(v, idx) };
+  });
+
   const persistNewVersion = (version: DesignVersion) => {
     if (!activeDesign) return;
     const updated: DesignRecord = {
@@ -509,14 +551,52 @@ function ResultView({
     setTimeout(() => setCopied(false), 1500);
   };
 
-  const downloadMarkdown = () => {
-    const blob = new Blob([designMd], { type: "text/markdown" });
+  const download = (blob: Blob, filename: string) => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "design.md";
+    a.download = filename;
     a.click();
     URL.revokeObjectURL(url);
+  };
+
+  const downloadMarkdown = () => download(new Blob([designMd], { type: "text/markdown" }), "design.md");
+
+  const exportWireframe = () => {
+    const payload = buildWireframeExport({ design: activeDesign, idea, platform, pwa, designMd, screens });
+    download(new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" }), "wireframe.json");
+  };
+
+  const withImages = screens.filter((s) => s.generatedImage);
+
+  const exportHifi = async () => {
+    if (withImages.length === 0 || exportingZip) return;
+    setExportingZip(true);
+    setExportError(null);
+    try {
+      const { default: JSZip } = await import("jszip");
+      const zip = new JSZip();
+      const title = activeDesign?.title || idea.slice(0, 60) || "Untitled design";
+      const entries: { name: string; file: string }[] = [];
+
+      for (let i = 0; i < withImages.length; i++) {
+        const screen = withImages[i];
+        const res = await fetch(screen.generatedImage!);
+        if (!res.ok) throw new Error(`Couldn't fetch the mockup for "${screen.name}"`);
+        const file = screenFileName(screen, i);
+        zip.file(`screens/${file}`, await res.blob());
+        entries.push({ name: screen.name, file });
+      }
+
+      zip.file("DESIGN.md", designMd);
+      zip.file("README.md", buildHifiReadme(title, designMd, entries));
+      zip.file("wireframe.json", JSON.stringify(buildWireframeExport({ design: activeDesign, idea, platform, pwa, designMd, screens }), null, 2));
+      download(await zip.generateAsync({ type: "blob" }), "hifi-assets.zip");
+    } catch (err) {
+      setExportError(err instanceof Error ? err.message : "Export failed");
+    } finally {
+      setExportingZip(false);
+    }
   };
 
   const produce = () => {
@@ -546,12 +626,26 @@ function ResultView({
           <Button variant="outline" size="sm" onClick={onEditSetup}>
             Edit setup
           </Button>
+          <Button variant="outline" size="sm" onClick={exportWireframe} disabled={!designMd}>
+            <Download className="h-3.5 w-3.5" /> Export wireframe
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={exportHifi}
+            disabled={withImages.length === 0 || exportingZip}
+            title={withImages.length === 0 ? "Generate at least one mockup image first" : `Zips ${withImages.length} mockup(s) with DESIGN.md`}
+          >
+            {exportingZip ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+            {exportingZip ? "Zipping..." : "Export hi-fi assets"}
+          </Button>
           <Button size="sm" onClick={produce}>
             {confirmed ? <Check className="h-3.5 w-3.5" /> : null}
             {confirmed ? "Ready — copy or download below" : "Produce DESIGN.md"}
           </Button>
         </div>
       </div>
+      {exportError && <p className="text-sm text-destructive">{exportError}</p>}
 
       <div className="flex flex-1 flex-col gap-4 overflow-auto lg:flex-row lg:overflow-hidden">
         <div className="flex flex-col gap-3 overflow-auto lg:w-1/2">
@@ -576,14 +670,14 @@ function ResultView({
             <span className="text-muted-foreground">
               Screen: {currentIndex + 1}/{tabScreens.length}
             </span>
-            <Select value={currentScreen?.id ?? ""} onValueChange={(v) => v && navigate(v)}>
+            <Select value={currentScreen?.id ?? ""} onValueChange={(v) => v && navigate(v)} items={screenItems}>
               <SelectTrigger className="h-8 w-48">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {tabScreens.map((s) => (
-                  <SelectItem key={s.id} value={s.id}>
-                    {s.name}
+                {screenItems.map((item) => (
+                  <SelectItem key={item.value} value={item.value}>
+                    {item.label}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -661,20 +755,20 @@ function ResultView({
             <span className="text-sm font-medium">DESIGN.md</span>
             <div className="flex flex-wrap items-center gap-2">
               {activeDesign && versions.length > 0 && !editing && (
-                <Select value={viewingVersionId ?? "current"} onValueChange={(v) => setViewingVersionId(v === "current" ? null : v)}>
+                <Select
+                  value={viewingVersionId ?? "current"}
+                  onValueChange={(v) => setViewingVersionId(v === "current" ? null : v)}
+                  items={versionItems}
+                >
                   <SelectTrigger className="h-8 w-44">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {[...versions].reverse().map((v) => {
-                      const idx = versions.findIndex((x) => x.id === v.id);
-                      const isLatest = idx === versions.length - 1;
-                      return (
-                        <SelectItem key={v.id} value={isLatest ? "current" : v.id}>
-                          {versionLabel(v, idx)}
-                        </SelectItem>
-                      );
-                    })}
+                    {versionItems.map((item) => (
+                      <SelectItem key={item.value} value={item.value}>
+                        {item.label}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               )}

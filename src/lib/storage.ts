@@ -145,4 +145,7 @@ export const designStore = {
     all.unshift(design);
     write(designKey(), all.slice(0, DESIGN_LIMIT));
   },
+  remove: (id: string) => {
+    write(designKey(), read<DesignRecord>(designKey()).filter((d) => d.id !== id));
+  },
 };
