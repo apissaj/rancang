@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { ArrowRight, MessagesSquare, FileText, Palette, Cpu } from "lucide-react";
+import { ArrowRight, MessagesSquare, FileText, FileCode2, FileCog, Palette, Cpu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import LandingLoader from "@/components/effects/landing-loader";
 import Reveal from "@/components/effects/reveal";
@@ -103,38 +103,90 @@ export default function Home() {
             </Reveal>
           </div>
 
-          {/* Right visual: flat-bordered preview card */}
-          <div className="flex items-center lg:col-span-5">
-            <Reveal start={ready} delay={350} className="w-full">
-              <div className="w-full rounded-sm border border-border bg-card/60 p-6">
-                <div className="flex items-center justify-between border-b border-border pb-3">
-                  <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                    Alur kerja
-                  </span>
-                  <span className="flex gap-1.5">
-                    <span className="size-2 rounded-full bg-muted-foreground/30" />
-                    <span className="size-2 rounded-full bg-muted-foreground/30" />
-                    <span className="size-2 rounded-full bg-muted-foreground/30" />
-                  </span>
-                </div>
-                <ol className="mt-4 space-y-3">
-                  {[
-                    "Tulis ide kasar dalam satu kalimat",
-                    "Jawab 5 pertanyaan konteks (atau lewati)",
-                    "Dapatkan PRD, spec, plan, dan tasks streaming",
-                    "Ekspor markdown ke coding agent mana pun",
-                  ].map((step, i) => (
-                    <li key={step} className="flex items-start gap-3 text-sm">
-                      <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-sm border border-border text-[10px] font-semibold text-muted-foreground">
-                        {i + 1}
-                      </span>
-                      <span className="leading-snug text-muted-foreground">{step}</span>
-                    </li>
-                  ))}
-                </ol>
-              </div>
-            </Reveal>
-          </div>
+          {/* Right visual: VSCode-style blueprint window */}
+                    <div className="flex items-center lg:col-span-5">
+                      <Reveal start={ready} delay={350} className="w-full">
+                        <div className="w-full overflow-hidden rounded-sm border border-border bg-card shadow-[0_8px_30px_rgba(0,0,0,0.12)]">
+                          {/* macOS title bar */}
+                          <div className="flex items-center gap-2 border-b border-border bg-muted/40 px-4 py-2.5">
+                            <div className="flex items-center gap-1.5">
+                              <span className="size-3 rounded-full bg-[#FF5F56]" />
+                              <span className="size-3 rounded-full bg-[#FFBD2E]" />
+                              <span className="size-3 rounded-full bg-[#27C93F]" />
+                            </div>
+                            <span className="ml-3 truncate font-mono text-xs text-muted-foreground">
+                              PRD.md — Rancang
+                            </span>
+                          </div>
+
+                          {/* Tab bar */}
+                          <div className="flex items-end overflow-x-auto border-b border-border bg-muted/20">
+                            <div className="flex items-center gap-1.5 border-r border-border bg-card px-4 py-2 font-mono text-xs text-foreground">
+                              <FileText className="size-3.5 shrink-0" />
+                              PRD.md
+                            </div>
+                            <div className="flex items-center gap-1.5 border-r border-border px-4 py-2 font-mono text-xs text-muted-foreground/70">
+                              <FileCode2 className="size-3.5 shrink-0" />
+                              DESIGN.md
+                            </div>
+                            <div className="flex items-center gap-1.5 border-r border-border px-4 py-2 font-mono text-xs text-muted-foreground/70">
+                              <FileCog className="size-3.5 shrink-0" />
+                              TASKS.md
+                            </div>
+                          </div>
+
+                          {/* Editor body */}
+                          <div className="min-w-0 overflow-x-auto">
+                            <div className="min-w-[360px] p-4 font-mono text-xs leading-6 sm:text-[13px]">
+                              {[
+                                { kind: "heading1", text: "# PRD: Aplikasi Todo Kolaboratif" },
+                                { kind: "blank", text: "" },
+                                { kind: "heading2", text: "## 1. Executive Summary" },
+                                { kind: "body", text: "Aplikasi todo lintas perangkat dengan real-time" },
+                                { kind: "body", text: "sync dan kolaborasi antar anggota tim." },
+                                { kind: "blank", text: "" },
+                                { kind: "heading2", text: "## 2. User Stories" },
+                                { kind: "list", text: "US-01: Buat, hapus, dan edit task" },
+                                { kind: "list", text: "US-02: Bagikan daftar ke anggota tim" },
+                                { kind: "list", text: "US-03: Terima update real-time" },
+                                { kind: "blank", text: "" },
+                                { kind: "heading2", text: "## 3. Task Breakdown (T-01..T-12)" },
+                                { kind: "list", text: "T-01: Scaffold Next.js + database schema" },
+                                { kind: "list", text: "T-02: Auth dengan Google OAuth" },
+                              ].map((line, i) => (
+                                <div key={i} className="flex">
+                                  <span className="w-8 shrink-0 select-none pr-3 text-right text-[10px] leading-6 text-muted-foreground/40">
+                                    {i + 1}
+                                  </span>
+                                  <span
+                                    className={
+                                      line.kind === "heading1"
+                                        ? "whitespace-pre text-foreground font-semibold"
+                                        : line.kind === "heading2"
+                                          ? "whitespace-pre text-foreground/90 font-medium"
+                                          : line.kind === "list"
+                                            ? "whitespace-pre text-muted-foreground"
+                                            : "whitespace-pre text-muted-foreground/70"
+                                    }
+                                  >
+                                    {line.text || "\u00A0"}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Status bar */}
+                          <div className="flex items-center gap-4 border-t border-border bg-muted/40 px-4 py-1.5 font-mono text-[10px] text-muted-foreground/70">
+                            <span className="flex items-center gap-1">
+                              <ArrowRight className="size-3" /> main
+                            </span>
+                            <span>Ln 14, Col 1</span>
+                            <span className="ml-auto hidden sm:inline">Markdown</span>
+                          </div>
+                        </div>
+                      </Reveal>
+                    </div>
         </section>
 
         {/* Tools: 4-column grid, flat borders */}
