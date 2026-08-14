@@ -14,6 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { FadeInUp } from "@/components/effects/fade-in-up";
 
 export function Composer({
   models,
@@ -60,6 +61,7 @@ export function Composer({
   };
 
   return (
+    <FadeInUp delay={120}>
     <div className="border-t border-border bg-background/60 p-3">
       <div className="mx-auto max-w-3xl">
         <div className="mb-2 flex flex-wrap items-center gap-3">
@@ -122,5 +124,6 @@ export function Composer({
         )}
       </div>
     </div>
+    </FadeInUp>
   );
 }

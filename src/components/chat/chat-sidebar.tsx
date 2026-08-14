@@ -3,6 +3,7 @@
 import { Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { FadeInUp } from "@/components/effects/fade-in-up";
 import { cn } from "@/lib/utils";
 import type { Conversation } from "@/lib/storage";
 
@@ -20,6 +21,7 @@ export function ChatSidebar({
   onDelete: (id: string) => void;
 }) {
   return (
+    <FadeInUp delay={0}>
     <div className="flex h-full w-64 shrink-0 flex-col border-r bg-muted/20">
       <div className="p-2">
         <Button variant="secondary" className="w-full justify-start gap-2 shadow-sm" onClick={onNew}>
@@ -61,5 +63,6 @@ export function ChatSidebar({
         </div>
       </ScrollArea>
     </div>
+    </FadeInUp>
   );
 }

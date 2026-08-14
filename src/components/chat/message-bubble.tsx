@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Check, Copy, Hammer, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Markdown } from "@/components/markdown";
+import { FadeInUp } from "@/components/effects/fade-in-up";
 import { cn } from "@/lib/utils";
 import type { ChatMessageRecord } from "@/lib/storage";
 
@@ -18,6 +19,7 @@ export function MessageBubble({ message, streaming }: { message: ChatMessageReco
   };
 
   return (
+    <FadeInUp delay={0}>
     <div className={cn("group flex gap-3", isUser ? "flex-row-reverse" : "flex-row")}>
       {/* Avatar */}
       <div
@@ -85,7 +87,8 @@ export function MessageBubble({ message, streaming }: { message: ChatMessageReco
             {copied ? "Tersalin" : "Salin"}
           </Button>
         )}
-      </div>
-    </div>
-  );
-}
+              </div>
+            </div>
+            </FadeInUp>
+          );
+        }
