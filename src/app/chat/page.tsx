@@ -5,6 +5,7 @@ import { nanoid } from "nanoid";
 import { ChatSidebar } from "@/components/chat/chat-sidebar";
 import { Composer } from "@/components/chat/composer";
 import { MessageBubble } from "@/components/chat/message-bubble";
+import { Greeting } from "@/components/chat/greeting";
 import { ComparisonView, type ComparisonColumn } from "@/components/chat/comparison-view";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { streamChat } from "@/hooks/use-chat-stream";
@@ -180,11 +181,11 @@ export default function ChatPage() {
           <ComparisonView prompt={comparison.prompt} columns={comparison.columns} />
         ) : (
           <ScrollArea className="flex-1">
-            <div className="mx-auto flex max-w-3xl flex-col gap-4 p-4">
+            <div className="relative mx-auto flex min-h-full max-w-3xl flex-col gap-5 px-4 py-6 md:gap-7">
               {messages.length === 0 && (
-                <p className="mt-12 text-center text-sm text-muted-foreground">
-                  Start a conversation below.
-                </p>
+                <div className="flex flex-1 items-center justify-center py-20">
+                  <Greeting onPick={(text) => (compareMode ? sendComparison(text) : sendSingle(text))} />
+                </div>
               )}
               {messages.map((m) => (
                 <MessageBubble key={m.id} message={m} streaming={m.id === streamingId} />
