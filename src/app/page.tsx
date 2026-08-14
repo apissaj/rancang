@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ArrowRight, MessagesSquare, FileText, FileCode2, FileCog, Palette, Cpu } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import LandingLoader from "@/components/effects/landing-loader";
 import Reveal from "@/components/effects/reveal";
 import HeroBand from "@/components/effects/hero-band";
 import HowItWorks from "@/components/effects/how-it-works";
@@ -61,7 +60,6 @@ export default function Home() {
 
   return (
     <>
-      <LandingLoader />
       <div
         className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-6 py-16 transition-opacity duration-700 sm:py-24"
         style={{ opacity: ready ? 1 : 0 }}
