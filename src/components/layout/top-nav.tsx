@@ -2,10 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Hammer } from "lucide-react";
+import { Hammer, Menu } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { AuthButton } from "@/components/layout/auth-button";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { Button } from "@/components/ui/button";
 
 const links = [
   { href: "/chat", label: "Chat" },
@@ -16,29 +18,78 @@ const links = [
 export function TopNav() {
   const pathname = usePathname();
 
+  const active = (href: string) => pathname.startsWith(href);
+
   return (
-    <header className="sticky top-0 z-40 border-b bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
-        <Link href="/" className="flex items-center gap-2 text-base font-semibold tracking-tight transition-opacity hover:opacity-80">
-          <Hammer className="h-5 w-5" />
+    <header className="sticky top-4 z-40 px-3">
+      <div className="mx-auto flex h-12 max-w-6xl items-center justify-between rounded-full border border-border bg-background/80 px-3 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        {/* Brand */}
+        <Link href="/" className="flex items-center gap-2 pl-1 text-sm font-semibold tracking-tight transition-opacity hover:opacity-80">
+          <Hammer className="h-4 w-4" />
           Rancang
         </Link>
-        <nav className="flex items-center gap-1">
+
+        {/* Desktop nav */}
+        <nav className="hidden items-center gap-1 md:flex">
           {links.map((link) => (
             <Link
               key={link.href}
               href={link.href}
               className={cn(
-                "rounded-lg px-3 py-1.5 text-sm font-medium outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:ring-3 focus-visible:ring-ring/50",
-                pathname.startsWith(link.href) && "bg-accent text-accent-foreground"
+                "rounded-full px-3.5 py-1.5 text-sm font-medium outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:ring-3 focus-visible:ring-ring/50",
+                active(link.href) && "bg-accent text-accent-foreground"
               )}
             >
               {link.label}
             </Link>
           ))}
+        </nav>
+
+        <div className="hidden items-center gap-1 md:flex">
           <ThemeToggle />
           <AuthButton />
-        </nav>
+        </div>
+
+        {/* Mobile: hamburger + theme */}
+        <div className="flex items-center gap-1 md:hidden">
+          <ThemeToggle />
+          <Sheet>
+            <SheetTrigger
+                          render={
+                            <Button variant="ghost" size="icon" aria-label="Buka menu" className="rounded-full">
+                              <Menu className="h-4 w-4" />
+                            </Button>
+                          }
+                        />
+            <SheetContent side="right" className="flex flex-col justify-between">
+              <div>
+                <SheetHeader className="text-left">
+                  <SheetTitle className="flex items-center gap-2 text-base">
+                    <Hammer className="h-4 w-4" />
+                    Rancang
+                  </SheetTitle>
+                </SheetHeader>
+                <nav className="mt-6 flex flex-col gap-1">
+                  {links.map((link) => (
+                    <Link
+                      key={link.href}
+                      href={link.href}
+                      className={cn(
+                        "rounded-lg px-3 py-2 text-sm font-medium outline-none transition-colors hover:bg-accent hover:text-accent-foreground",
+                        active(link.href) && "bg-accent text-accent-foreground"
+                      )}
+                    >
+                      {link.label}
+                    </Link>
+                  ))}
+                </nav>
+              </div>
+              <div className="border-t border-border pt-4">
+                <AuthButton />
+              </div>
+            </SheetContent>
+          </Sheet>
+        </div>
       </div>
     </header>
   );
