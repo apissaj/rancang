@@ -9,6 +9,9 @@ import Reveal from "@/components/effects/reveal";
 import HeroBand from "@/components/effects/hero-band";
 import HowItWorks from "@/components/effects/how-it-works";
 import Integrations from "@/components/effects/integrations";
+import Testimonials from "@/components/effects/testimonials";
+import BlueprintPreview from "@/components/effects/blueprint-preview";
+import Pricing from "@/components/effects/pricing";
 import FAQ from "@/components/effects/faq";
 import CTASection from "@/components/effects/cta-section";
 import Footer from "@/components/layout/footer";
@@ -167,6 +170,9 @@ export default function Home() {
 
         <HowItWorks />
         <Integrations />
+        <BlueprintPreview />
+        <Testimonials />
+        <Pricing />
         <FAQ />
         <HeroBand />
         <CTASection />
