@@ -21,28 +21,28 @@ export function TopNav() {
   const active = (href: string) => pathname.startsWith(href);
 
   return (
-    <header className="sticky top-4 z-40 px-3">
-      <div className="mx-auto flex h-12 max-w-6xl items-center justify-between rounded-full border border-border bg-background/80 px-3 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header className="sticky top-0 z-40 w-full border-b border-border bg-background">
+      <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-3 px-4">
         {/* Brand */}
-        <Link href="/" className="flex items-center gap-2 pl-1 text-sm font-semibold tracking-tight transition-opacity hover:opacity-80">
-          <Hammer className="h-4 w-4" />
+        <Link href="/" className="flex items-center gap-2 pl-0 text-base font-semibold tracking-tight transition-opacity hover:opacity-80">
+          <Hammer className="h-5 w-5" />
           Rancang
         </Link>
 
         {/* Desktop nav */}
-        <nav className="hidden items-center gap-1 md:flex">
+        <nav className="hidden items-center gap-0 md:flex">
           {links.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className={cn(
-                "rounded-full px-3.5 py-1.5 text-sm font-medium outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:ring-3 focus-visible:ring-ring/50",
-                active(link.href) && "bg-accent text-accent-foreground"
-              )}
-            >
-              {link.label}
-            </Link>
-          ))}
+                      <Button
+                        key={link.href}
+                        variant="ghost"
+                        size="sm"
+                        className={cn(
+                          "px-2.5 font-medium",
+                          active(link.href) && "bg-accent text-accent-foreground"
+                        )}
+                        render={<Link href={link.href}>{link.label}</Link>}
+                      />
+                    ))}
         </nav>
 
         <div className="hidden items-center gap-1 md:flex">
@@ -55,12 +55,12 @@ export function TopNav() {
           <ThemeToggle />
           <Sheet>
             <SheetTrigger
-                          render={
-                            <Button variant="ghost" size="icon" aria-label="Buka menu" className="rounded-full">
-                              <Menu className="h-4 w-4" />
-                            </Button>
-                          }
-                        />
+              render={
+                <Button variant="ghost" size="icon" aria-label="Buka menu" className="rounded-lg">
+                  <Menu className="h-4 w-4" />
+                </Button>
+              }
+            />
             <SheetContent side="right" className="flex flex-col justify-between">
               <div>
                 <SheetHeader className="text-left">
