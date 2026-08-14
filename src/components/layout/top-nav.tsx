@@ -37,9 +37,9 @@ export function TopNav() {
                         variant="ghost"
                         size="sm"
                         className={cn(
-                          "px-2.5 font-medium",
-                          active(link.href) && "bg-accent text-accent-foreground"
-                        )}
+                                        "px-2.5 font-medium",
+                                        active(link.href) && "bg-muted text-foreground"
+                                      )}
                         render={<Link href={link.href}>{link.label}</Link>}
                       />
                     ))}
@@ -75,8 +75,8 @@ export function TopNav() {
                       key={link.href}
                       href={link.href}
                       className={cn(
-                        "rounded-lg px-3 py-2 text-sm font-medium outline-none transition-colors hover:bg-accent hover:text-accent-foreground",
-                        active(link.href) && "bg-accent text-accent-foreground"
+                        "rounded-lg px-3 py-2 text-sm font-medium outline-none transition-colors hover:bg-muted hover:text-foreground",
+                        active(link.href) && "bg-muted text-foreground"
                       )}
                     >
                       {link.label}
