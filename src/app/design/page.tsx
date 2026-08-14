@@ -374,21 +374,27 @@ function ResultView({
   const screensRef = useRef(screens);
   screensRef.current = screens;
 
+  // Same reason as screensRef: a version added mid-bulk-run (e.g. "Revise" while images generate)
+  // would otherwise be clobbered by the stale `activeDesign` closure on the next persist.
+  const activeDesignRef = useRef(activeDesign);
+  activeDesignRef.current = activeDesign;
+
   const persistScreenImage = (screenId: string, image: string) => {
     const updatedScreens = screensRef.current.map((s) => (s.id === screenId ? { ...s, generatedImage: image } : s));
     screensRef.current = updatedScreens;
     setScreens(updatedScreens);
-    if (!activeDesign) return;
-    const lastIdx = activeDesign.versions.length - 1;
-    const updatedVersions = activeDesign.versions.map((v, i) => (i === lastIdx ? { ...v, screens: updatedScreens } : v));
-    const updated: DesignRecord = { ...activeDesign, screens: updatedScreens, versions: updatedVersions };
+    const design = activeDesignRef.current;
+    if (!design) return;
+    const lastIdx = design.versions.length - 1;
+    const updatedVersions = design.versions.map((v, i) => (i === lastIdx ? { ...v, screens: updatedScreens } : v));
+    const updated: DesignRecord = { ...design, screens: updatedScreens, versions: updatedVersions };
     designStore.save(updated);
     sync.syncDesign(updated);
     setDesigns(designStore.all());
   };
 
   const generateImage = async (screenId: string, attempt = 1): Promise<void> => {
-    const target = screens.find((s) => s.id === screenId);
+    const target = screensRef.current.find((s) => s.id === screenId);
     if (!target) return;
     setGeneratingId(screenId);
     setImageError(null);
