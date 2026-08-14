@@ -28,7 +28,7 @@ export default function Integrations() {
               key={name}
               className="flex items-center justify-center gap-2 rounded-sm border border-border bg-card/60 px-4 py-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
             >
-              <BrandLogo brand={brand} className="size-4 shrink-0" />
+              <BrandLogo brand={brand} className="size-6 shrink-0" />
               {name}
             </div>
           ))}
