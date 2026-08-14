@@ -41,10 +41,10 @@ export function setStorageScope(uid: string | null) {
 }
 
 function chatKey() {
-  return `prd-forge:${scope}:conversations`;
+  return `rancang:${scope}:conversations`;
 }
 function planKey() {
-  return `prd-forge:${scope}:plans`;
+  return `rancang:${scope}:plans`;
 }
 
 function read<T>(key: string): T[] {
@@ -135,7 +135,7 @@ export type DesignRecord = {
 const DESIGN_LIMIT = 5;
 
 function designKey() {
-  return `prd-forge:${scope}:designs`;
+  return `rancang:${scope}:designs`;
 }
 
 export const designStore = {

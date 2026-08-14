@@ -60,7 +60,7 @@ export async function POST(req: Request) {
     const imageUrl = await saveImage(designId, screen.id, image);
     return NextResponse.json({ imageUrl });
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
+    const message = err instanceof Error ? err.message : "Kesalahan tidak diketahui";
     return NextResponse.json({ error: message }, { status: 502 });
   }
 }

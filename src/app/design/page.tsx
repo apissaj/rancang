@@ -89,7 +89,7 @@ export default function DesignPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ idea, planMarkdown, vibe: vibe || undefined, platform, pwa }),
       });
-      if (!res.ok) throw new Error((await res.json().catch(() => ({ error: "Generation failed" }))).error ?? "Generation failed");
+      if (!res.ok) throw new Error((await res.json().catch(() => ({ error: "Pembuatan gagal" }))).error ?? "Pembuatan gagal");
       const data = (await res.json()) as { designMd: string; screens: Screen[] };
       const now = Date.now();
       const record: DesignRecord = {
@@ -112,7 +112,7 @@ export default function DesignPage() {
       setShowSetup(false);
       sync.syncDesign(record);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong");
+      setError(err instanceof Error ? err.message : "Terjadi kesalahan");
     } finally {
       setLoading(false);
     }
@@ -238,15 +238,15 @@ function SetupForm({
           </Button>
         )}
         <div>
-          <h1 className="text-xl font-semibold">Turn an idea into a design</h1>
+          <h1 className="text-xl font-semibold">Ubah ide jadi desain</h1>
           <p className="text-sm text-muted-foreground">
-            Generates a DESIGN.md token spec plus a clickable wireframe prototype.
+            Menghasilkan spesifikasi token DESIGN.md plus prototipe wireframe yang bisa diklik.
           </p>
         </div>
 
         {plans.length > 0 && (
           <div className="flex flex-col gap-1.5">
-            <Label className="text-xs">Start from an existing PRD (optional)</Label>
+            <Label className="text-xs">Mulai dari PRD yang ada (opsional)</Label>
             <Select value={sourcePlanId} onValueChange={(v) => v && setSourcePlanId(v)} items={planItems}>
               <SelectTrigger className="h-9 w-full">
                 <SelectValue />
@@ -267,13 +267,13 @@ function SetupForm({
           <Textarea
             value={idea}
             onChange={(e) => setIdea(e.target.value)}
-            placeholder='e.g. "A habit tracker app where users log daily habits and see streaks"'
+            placeholder='mis. "Aplikasi pelacak kebiasaan di mana pengguna mencatat kebiasaan harian dan melihat streak"'
             className="min-h-[120px] resize-none"
           />
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <Label className="text-xs">Vibe (optional)</Label>
+          <Label className="text-xs">Vibe (opsional)</Label>
           <Input
             value={vibe}
             onChange={(e) => setVibe(e.target.value)}
@@ -301,9 +301,9 @@ function SetupForm({
 
         <Button onClick={onGenerate} disabled={loading || !idea.trim()}>
           {loading && <Loader2 className="h-4 w-4 animate-spin" />}
-          {loading ? "Designing..." : "Generate Design"}
+          {loading ? "Membuat desain..." : "Buat Desain"}
         </Button>
-        {loading && <p className="text-xs text-muted-foreground">This can take 10-30s.</p>}
+        {loading && <p className="text-xs text-muted-foreground">Ini bisa butuh 10-30 detik.</p>}
         {error && <p className="text-sm text-destructive">{error}</p>}
       </div>
     </div>
@@ -440,7 +440,7 @@ function ResultView({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ screen: target, designMd, designId: activeDesign?.id }),
       });
-      if (!res.ok) throw new Error((await res.json().catch(() => ({ error: "Image generation failed" }))).error ?? "Image generation failed");
+      if (!res.ok) throw new Error((await res.json().catch(() => ({ error: "Pembuatan gambar gagal" }))).error ?? "Pembuatan gambar gagal");
       const data = (await res.json()) as { imageUrl: string };
       setGenJustSucceeded(true);
       await new Promise((r) => setTimeout(r, 250));
@@ -454,7 +454,7 @@ function ResultView({
         await new Promise((r) => setTimeout(r, 1500));
         return generateImage(screenId, attempt + 1);
       }
-      setImageError(err instanceof Error ? err.message : "Something went wrong");
+      setImageError(err instanceof Error ? err.message : "Terjadi kesalahan");
     } finally {
       setGeneratingId(null);
       setGenStartedAt(null);
@@ -522,12 +522,12 @@ function ResultView({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ designMd, screens, instruction }),
       });
-      if (!res.ok) throw new Error((await res.json().catch(() => ({ error: "Edit failed" }))).error ?? "Edit failed");
+      if (!res.ok) throw new Error((await res.json().catch(() => ({ error: "Edit gagal" }))).error ?? "Edit gagal");
       const data = (await res.json()) as { designMd: string; screens: Screen[] };
       persistNewVersion({ id: nanoid(), designMd: data.designMd, screens: data.screens, createdAt: Date.now(), source: "ai-edit", note: instruction });
       setAiInstruction("");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong");
+      setError(err instanceof Error ? err.message : "Terjadi kesalahan");
     } finally {
       setAiEditing(false);
     }
@@ -593,7 +593,7 @@ function ResultView({
       zip.file("wireframe.json", JSON.stringify(buildWireframeExport({ design: activeDesign, idea, platform, pwa, designMd, screens }), null, 2));
       download(await zip.generateAsync({ type: "blob" }), "hifi-assets.zip");
     } catch (err) {
-      setExportError(err instanceof Error ? err.message : "Export failed");
+      setExportError(err instanceof Error ? err.message : "Export gagal");
     } finally {
       setExportingZip(false);
     }
@@ -634,10 +634,10 @@ function ResultView({
             size="sm"
             onClick={exportHifi}
             disabled={withImages.length === 0 || exportingZip}
-            title={withImages.length === 0 ? "Generate at least one mockup image first" : `Zips ${withImages.length} mockup(s) with DESIGN.md`}
+            title={withImages.length === 0 ? "Buat minimal satu gambar mockup dulu" : `Membuat zip ${withImages.length} mockup dengan DESIGN.md`}
           >
             {exportingZip ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
-            {exportingZip ? "Zipping..." : "Export hi-fi assets"}
+            {exportingZip ? "Mengompres..." : "Export aset hi-fi"}
           </Button>
           <Button size="sm" onClick={produce}>
             {confirmed ? <Check className="h-3.5 w-3.5" /> : null}
@@ -700,7 +700,7 @@ function ResultView({
                   onClick={() => setViewMode(m)}
                   className={`rounded-md px-3 py-1 text-sm transition-colors ${viewMode === m ? "bg-accent" : "hover:bg-accent/50"}`}
                 >
-                  {m === "wireframe" ? "Wireframe" : "Hi-fi mockup"}
+                  {m === "wireframe" ? "Wireframe" : "Mockup Hi-fi"}
                 </button>
               ))}
             </div>
@@ -741,7 +741,7 @@ function ResultView({
                     {generatingId === currentScreen.id && genStartedAt && !bulkProgress ? (
                       <GenerationProgress startedAt={genStartedAt} justSucceeded={genJustSucceeded} />
                     ) : (
-                      <p className="text-xs text-muted-foreground">May take up to a minute.</p>
+                      <p className="text-xs text-muted-foreground">Mungkin butuh sampai satu menit.</p>
                     )}
                   </div>
                 )}
@@ -814,9 +814,9 @@ function ResultView({
           {error && <p className="px-4 py-2 text-sm text-destructive">{error}</p>}
           {viewedVersion && (
             <div className="flex items-center justify-between gap-2 border-b bg-amber-500/10 px-4 py-2 text-sm">
-              <span>Viewing v{versions.findIndex((v) => v.id === viewedVersion.id) + 1} (not current)</span>
+              <span>Melihat v{versions.findIndex((v) => v.id === viewedVersion.id) + 1} (bukan terbaru)</span>
               <Button size="sm" variant="outline" onClick={restoreVersion}>
-                Restore this version
+                Pulihkan versi ini
               </Button>
             </div>
           )}

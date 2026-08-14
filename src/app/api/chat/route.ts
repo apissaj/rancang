@@ -15,7 +15,7 @@ export async function POST(req: Request) {
       headers: { "Content-Type": "text/plain; charset=utf-8" },
     });
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
+    const message = err instanceof Error ? err.message : "Kesalahan tidak diketahui";
     return new Response(message, { status: 502 });
   }
 }

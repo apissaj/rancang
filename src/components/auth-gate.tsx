@@ -11,6 +11,10 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
 
   if (loading) return null;
 
+  // Anonymous/localStorage mode: if Firebase isn't configured, the app works
+  // without any sign-in — skip the gate entirely.
+  if (!firebaseEnabled) return <>{children}</>;
+
   if (!user) {
     return (
       <div className="flex flex-1 items-center justify-center px-4 py-16">

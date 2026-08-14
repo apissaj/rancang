@@ -16,7 +16,7 @@ export function PlanSidebar({
   return (
     <div className="w-full shrink-0 border-b bg-muted/20 lg:w-64 lg:border-b-0 lg:border-r">
       <div className="px-3 py-2 text-xs font-semibold uppercase text-muted-foreground">
-        Recent PRDs
+        PRD Terbaru
       </div>
       <ScrollArea className="h-40 lg:h-[calc(100%-2rem)]">
         <div className="flex flex-col gap-1 px-2 pb-2 lg:flex-col">
@@ -34,7 +34,7 @@ export function PlanSidebar({
             </button>
           ))}
           {plans.length === 0 && (
-            <p className="px-2 py-4 text-center text-xs text-muted-foreground">No PRDs yet</p>
+            <p className="px-2 py-4 text-center text-xs text-muted-foreground">Belum ada PRD</p>
           )}
         </div>
       </ScrollArea>

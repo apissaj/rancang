@@ -65,8 +65,8 @@ export function Composer({
         <div className="flex items-center gap-2">
           <Switch id="compare-mode" checked={compareMode} onCheckedChange={onCompareModeChange} />
           <Label htmlFor="compare-mode" className="text-sm">
-            Comparison mode
-          </Label>
+                      Mode perbandingan
+                    </Label>
         </div>
 
         {!compareMode ? (
@@ -103,7 +103,7 @@ export function Composer({
           value={text}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Ask anything... (Enter to send, Shift+Enter for newline)"
+          placeholder="Tanya apa saja... (Enter untuk kirim, Shift+Enter baris baru)"
           className="min-h-[52px] resize-none"
           rows={1}
         />
@@ -112,7 +112,7 @@ export function Composer({
         </Button>
       </div>
       {compareMode && compareModels.length < 2 && (
-        <p className="mt-1 text-xs text-muted-foreground">Select 2-3 models to compare.</p>
+        <p className="mt-1 text-xs text-muted-foreground">Pilih 2-3 model untuk dibandingkan.</p>
       )}
     </div>
   );

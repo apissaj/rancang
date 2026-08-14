@@ -42,7 +42,7 @@ export function ChatSidebar({
                 className="flex-1 truncate rounded text-left outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
                 title={c.title}
               >
-                {c.title || "New chat"}
+                {c.title || "Chat baru"}
               </button>
               <Button
                 variant="ghost"

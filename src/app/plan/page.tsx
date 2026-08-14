@@ -20,9 +20,9 @@ import { SyncIndicator } from "@/components/sync-indicator";
 import { AuthGate } from "@/components/auth-gate";
 
 const EXAMPLES = [
-  "A habit tracker app where users log daily habits and see streaks",
-  "A Chrome extension that summarizes long articles into 3 bullet points",
-  "An internal tool for support agents to search and reply to tickets faster",
+  "Aplikasi pelacak kebiasaan di mana pengguna mencatat kebiasaan harian dan melihat streak",
+  "Ekstensi Chrome yang merangkum artikel panjang menjadi 3 poin singkat",
+  "Alat internal untuk agen support mencari dan membalas tiket lebih cepat",
 ];
 
 type CompareColumn = {
@@ -56,6 +56,10 @@ export default function PlanPage() {
   const [aiInstruction, setAiInstruction] = useState("");
   const [aiEditing, setAiEditing] = useState(false);
   const [viewingVersionId, setViewingVersionId] = useState<string | null>(null); // null = current
+  const [multiMode, setMultiMode] = useState(true);
+  const [docs, setDocs] = useState<Record<string, string>>({});
+  const [activeDoc, setActiveDoc] = useState("prd");
+  const DOC_NAMES = ["prd", "spec", "plan", "tasks"] as const;
 
   useEffect(() => {
     fetch("/api/models")
@@ -117,6 +121,50 @@ export default function PlanPage() {
     return full;
   };
 
+  const streamMultiDocs = async (ideaText: string, selectedModel: string, answers: Answer[] | undefined) => {
+    const res = await fetch("/api/plan/full", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ idea: ideaText, answers, model: selectedModel }),
+    });
+    if (!res.ok || !res.body) throw new Error(await res.text());
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    let currentDoc = "prd";
+    const collected: Record<string, string> = { prd: "", spec: "", plan: "", tasks: "" };
+    const DOC_MARKER = /<!-- DOC:(\w+) -->/g;
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      // split on markers; content before marker goes to currentDoc
+      let m: RegExpExecArray | null;
+      let lastIndex = 0;
+      DOC_MARKER.lastIndex = 0;
+      while ((m = DOC_MARKER.exec(buffer)) !== null) {
+        const before = buffer.slice(lastIndex, m.index);
+        if (before) collected[currentDoc] += before;
+        currentDoc = m[1];
+        lastIndex = m.index + m[0].length;
+      }
+      const tail = buffer.slice(lastIndex);
+      buffer = "";
+      if (tail) {
+        // could be partial marker — keep last 30 chars in buffer, emit rest
+        const keep = Math.min(tail.length, 40);
+        const emitPart = tail.slice(0, tail.length - keep);
+        if (emitPart) collected[currentDoc] += emitPart;
+        buffer = tail.slice(tail.length - keep);
+      }
+      setDocs({ ...collected });
+    }
+    // flush remaining buffer
+    if (buffer) collected[currentDoc] += buffer;
+    setDocs({ ...collected });
+    return collected;
+  };
+
   const generatePrd = async (answers?: Answer[]) => {
     setError(null);
     setMarkdown("");
@@ -148,7 +196,7 @@ export default function PlanPage() {
             planStore.save(record);
             sync.syncPlan(record);
           } catch (err) {
-            const message = err instanceof Error ? err.message : "Something went wrong";
+            const message = err instanceof Error ? err.message : "Terjadi kesalahan";
             setCompareColumns((prev) => prev?.map((c) => (c.model === m ? { ...c, error: message } : c)) ?? prev);
           } finally {
             setCompareColumns((prev) => prev?.map((c) => (c.model === m ? { ...c, done: true } : c)) ?? prev);
@@ -162,8 +210,15 @@ export default function PlanPage() {
 
     setLoading(true);
     setCompareColumns(null);
+    setDocs({});
     try {
-      const full = await streamOne(ideaText, model, answers, setMarkdown);
+      let full: string;
+      if (multiMode) {
+        const collected = await streamMultiDocs(ideaText, model, answers);
+        full = collected.prd;
+      } else {
+        full = await streamOne(ideaText, model, answers, setMarkdown);
+      }
       const now = Date.now();
       const record: PlanRecord = {
         id: nanoid(),
@@ -181,7 +236,7 @@ export default function PlanPage() {
       sync.syncPlan(record);
       setIdea("");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong");
+      setError(err instanceof Error ? err.message : "Terjadi kesalahan");
     } finally {
       setLoading(false);
     }
@@ -240,6 +295,7 @@ export default function PlanPage() {
   const versions = activePlan?.versions ?? [];
   const viewedVersion = viewingVersionId ? versions.find((v) => v.id === viewingVersionId) ?? null : null;
   const displayedMarkdown = viewedVersion ? viewedVersion.markdown : markdown;
+  const currentDocContent = multiMode ? docs[activeDoc] || "" : displayedMarkdown;
 
   const persistNewVersion = (record: PlanRecord, version: PlanVersion) => {
     const updated: PlanRecord = { ...record, markdown: version.markdown, versions: [...record.versions, version] };
@@ -301,7 +357,7 @@ export default function PlanPage() {
       });
       setAiInstruction("");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong");
+      setError(err instanceof Error ? err.message : "Terjadi kesalahan");
     } finally {
       setAiEditing(false);
     }
@@ -319,7 +375,7 @@ export default function PlanPage() {
   };
 
   const copyMarkdown = async () => {
-    await navigator.clipboard.writeText(markdown);
+    await navigator.clipboard.writeText(currentDocContent || markdown);
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
   };
@@ -353,9 +409,9 @@ export default function PlanPage() {
       <div className="flex flex-1 flex-col gap-4 overflow-auto p-4 lg:flex-row lg:overflow-hidden lg:p-6">
         <div className="flex flex-col gap-3 lg:w-1/3">
           <div>
-            <h1 className="text-xl font-semibold">Describe your idea</h1>
+            <h1 className="text-xl font-semibold">Jelaskan ide kamu</h1>
             <p className="text-sm text-muted-foreground">
-              Get a structured PRD with goals, requirements, and a step-by-step task breakdown.
+              Dapatkan PRD terstruktur dengan tujuan, kebutuhan, dan rincian task langkah demi langkah.
             </p>
           </div>
 
@@ -363,8 +419,8 @@ export default function PlanPage() {
             <div className="flex items-center gap-2">
               <Switch id="compare-mode" checked={compareMode} onCheckedChange={setCompareMode} />
               <Label htmlFor="compare-mode" className="text-sm">
-                Compare models
-              </Label>
+                              Bandingkan model
+                            </Label>
             </div>
             {!compareMode ? (
               <Select value={model} onValueChange={(v) => v && setModel(v)}>
@@ -395,16 +451,16 @@ export default function PlanPage() {
             )}
           </div>
           {compareMode && compareModels.length < 2 && (
-            <p className="text-xs text-muted-foreground">Select 2-3 models to compare.</p>
-          )}
-          {compareMode && compareModels.length >= 3 && (
-            <p className="text-xs text-muted-foreground">Max 3 models.</p>
-          )}
+                      <p className="text-xs text-muted-foreground">Pilih 2-3 model untuk dibandingkan.</p>
+                    )}
+                    {compareMode && compareModels.length >= 3 && (
+                      <p className="text-xs text-muted-foreground">Maksimal 3 model.</p>
+                    )}
 
           <Textarea
             value={idea}
             onChange={(e) => setIdea(e.target.value)}
-            placeholder={`e.g. "${EXAMPLES[0]}"\n\nOther ideas:\n- ${EXAMPLES[1]}\n- ${EXAMPLES[2]}`}
+            placeholder={`mis. "${EXAMPLES[0]}"\n\nIde lain:\n- ${EXAMPLES[1]}\n- ${EXAMPLES[2]}`}
             className="min-h-[200px] resize-none"
             disabled={!!clarify}
           />
@@ -414,7 +470,7 @@ export default function PlanPage() {
               disabled={loading || clarifying || !idea.trim() || (compareMode && compareModels.length < 2)}
             >
               {(loading || clarifying) && <Loader2 className="h-4 w-4 animate-spin" />}
-              {clarifying ? "Analyzing your idea..." : loading ? "Generating..." : "Generate PRD"}
+              {clarifying ? "Menganalisis ide kamu..." : loading ? "Membuat..." : "Buat PRD"}
             </Button>
           )}
           {error && <p className="text-sm text-destructive">{error}</p>}
@@ -479,7 +535,25 @@ export default function PlanPage() {
         ) : (
           <div className="flex flex-1 flex-col overflow-hidden rounded-xl border shadow-sm lg:w-2/3">
             <div className="flex flex-wrap items-center justify-between gap-2 border-b px-4 py-2">
-              <span className="text-sm font-medium">Preview</span>
+              <span className="text-sm font-medium">Pratinjau</span>
+              {multiMode && !compareColumns && (
+                <div className="flex items-center gap-1 rounded-lg border bg-muted/40 p-1">
+                  {DOC_NAMES.map((doc) => (
+                    <button
+                      key={doc}
+                      onClick={() => setActiveDoc(doc)}
+                      className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
+                        activeDoc === doc
+                          ? "bg-background text-foreground shadow-sm"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      {doc}.md
+                      {docs[doc] && <span className="ml-1 text-[10px] text-muted-foreground">{docs[doc].length > 0 ? "●" : ""}</span>}
+                    </button>
+                  ))}
+                </div>
+              )}
               <div className="flex flex-wrap items-center gap-2">
                 {activePlan && versions.length > 0 && !editing && (
                   <Select
@@ -502,53 +576,53 @@ export default function PlanPage() {
                     </SelectContent>
                   </Select>
                 )}
-                {!editing && markdown && !loading && (
+                {!editing && currentDocContent && !loading && (
                   <Button variant="outline" size="sm" onClick={startEdit}>
-                    Edit
+                    Ubah
                   </Button>
                 )}
                 {editing && (
                   <>
                     <Button size="sm" onClick={saveEdit}>
-                      Save
+                      Simpan
                     </Button>
                     <Button variant="outline" size="sm" onClick={cancelEdit}>
-                      Cancel
+                      Batal
                     </Button>
                   </>
                 )}
-                <Button variant="outline" size="sm" onClick={copyMarkdown} disabled={!markdown}>
+                <Button variant="outline" size="sm" onClick={copyMarkdown} disabled={!currentDocContent && !markdown}>
                   {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-                  Copy Markdown
+                  {multiMode ? `Salin ${activeDoc}` : "Salin Markdown"}
                 </Button>
-                <Button variant="outline" size="sm" onClick={() => downloadMarkdown(markdown)} disabled={!markdown}>
+                <Button variant="outline" size="sm" onClick={() => downloadMarkdown(multiMode ? currentDocContent : markdown, multiMode ? `${activeDoc}.md` : undefined)} disabled={!currentDocContent && !markdown}>
                   <Download className="h-3.5 w-3.5" />
-                  Download .md
+                  Unduh {multiMode ? ".md" : "Markdown"}
                 </Button>
               </div>
             </div>
-            {!editing && markdown && !loading && activePlan && (
+            {!editing && (currentDocContent || markdown) && !loading && activePlan && (
               <div className="flex flex-wrap items-center gap-2 border-b bg-muted/30 px-4 py-2">
                 <input
                   value={aiInstruction}
                   onChange={(e) => setAiInstruction(e.target.value)}
-                  placeholder="Ubah bagian X jadi... / Add a section about... / Make goals more specific"
+                  placeholder="Ubah bagian X jadi... / Tambah section tentang... / Buat goals lebih spesifik"
                   className="h-8 flex-1 min-w-[200px] rounded-md border border-input bg-transparent px-2.5 text-sm outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
                   disabled={aiEditing}
                 />
                 <Button size="sm" onClick={runAiEdit} disabled={aiEditing || !aiInstruction.trim()}>
                   {aiEditing && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-                  {aiEditing ? "Revising..." : "Revise"}
+                  {aiEditing ? "Merevisi..." : "Revisi"}
                 </Button>
               </div>
             )}
             {viewedVersion && (
               <div className="flex items-center justify-between gap-2 border-b bg-amber-500/10 px-4 py-2 text-sm">
                 <span>
-                  Viewing v{versions.findIndex((v) => v.id === viewedVersion.id) + 1} (not current)
+                  Melihat v{versions.findIndex((v) => v.id === viewedVersion.id) + 1} (bukan terbaru)
                 </span>
                 <Button size="sm" variant="outline" onClick={restoreVersion}>
-                  Restore this version
+                  Pulihkan versi ini
                 </Button>
               </div>
             )}
@@ -559,11 +633,11 @@ export default function PlanPage() {
                   onChange={(e) => setEditDraft(e.target.value)}
                   className="h-full min-h-[300px] resize-none font-mono text-xs"
                 />
-              ) : displayedMarkdown ? (
-                <Markdown content={displayedMarkdown} />
+              ) : displayedMarkdown || (multiMode && docs[activeDoc]) ? (
+                <Markdown content={multiMode ? docs[activeDoc] || "" : displayedMarkdown} />
               ) : (
                 <p className="text-sm text-muted-foreground">
-                  Your generated PRD will stream in here live.
+                  PRD yang kamu buat akan tampil streaming di sini secara langsung.
                 </p>
               )}
             </div>
@@ -580,14 +654,14 @@ type Answer = { question: string; selected: string[]; note?: string };
 function timeAgo(ts: number): string {
   const diffMs = Date.now() - ts;
   const mins = Math.floor(diffMs / 60000);
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins}m ago`;
+  if (mins < 1) return "baru saja";
+  if (mins < 60) return `${mins}m lalu`;
   const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h ago`;
-  return `${Math.floor(hours / 24)}d ago`;
+  if (hours < 24) return `${hours}j lalu`;
+  return `${Math.floor(hours / 24)}h lalu`;
 }
 
 function versionLabel(v: PlanVersion, index: number): string {
-  const sourceLabel = v.source === "generated" ? "Generated" : v.source === "manual-edit" ? "Manual edit" : "AI edit";
+  const sourceLabel = v.source === "generated" ? "Dibuat" : v.source === "manual-edit" ? "Edit manual" : "Edit AI";
   return `v${index + 1} · ${sourceLabel} · ${timeAgo(v.createdAt)}`;
 }

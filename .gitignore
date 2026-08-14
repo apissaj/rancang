@@ -41,3 +41,7 @@ next-env.d.ts
 
 # local dev image storage (dev default, not used in prod container)
 /data
+
+# local research/reference assets (not part of the app)
+/react-bits-ref
+/spec-kit-assets

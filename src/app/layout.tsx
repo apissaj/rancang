@@ -17,8 +17,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "PRD Forge",
-  description: "Multi-model chat and instant PRD generation, powered by your own LLM gateway.",
+  title: "Rancang",
+  description: "Ubah ide jadi blueprint lengkap: PRD, spesifikasi, rencana, dan task — didukung gateway LLM sendiri.",
 };
 
 export default function RootLayout({

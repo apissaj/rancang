@@ -116,7 +116,7 @@ export async function POST(req: Request) {
     }
     return NextResponse.json(parsed);
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
+    const message = err instanceof Error ? err.message : "Kesalahan tidak diketahui";
     return NextResponse.json({ error: message }, { status: 502 });
   }
 }

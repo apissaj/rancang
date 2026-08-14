@@ -10,14 +10,14 @@ export function SyncIndicator({ status, active }: { status: SyncStatus; active: 
       {status === "syncing" ? (
         <>
           <Loader2 className="h-3 w-3 animate-spin" />
-          Syncing...
-        </>
-      ) : (
-        <>
-          <Cloud className="h-3 w-3" />
-          Synced
-        </>
-      )}
+                    Menyinkronkan...
+                  </>
+                ) : (
+                  <>
+                    <Cloud className="h-3 w-3" />
+                    Tersinkronkan
+                  </>
+                )}
     </div>
   );
 }

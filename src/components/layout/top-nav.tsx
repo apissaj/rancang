@@ -9,8 +9,8 @@ import { AuthButton } from "@/components/layout/auth-button";
 
 const links = [
   { href: "/chat", label: "Chat" },
-  { href: "/plan", label: "Plan" },
-  { href: "/design", label: "Design" },
+  { href: "/plan", label: "Rencana" },
+  { href: "/design", label: "Desain" },
 ];
 
 export function TopNav() {
@@ -21,7 +21,7 @@ export function TopNav() {
       <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
         <Link href="/" className="flex items-center gap-2 text-base font-semibold tracking-tight transition-opacity hover:opacity-80">
           <Hammer className="h-5 w-5" />
-          PRD Forge
+          Rancang
         </Link>
         <nav className="flex items-center gap-1">
           {links.map((link) => (

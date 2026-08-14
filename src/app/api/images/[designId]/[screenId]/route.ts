@@ -5,7 +5,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ desi
   const { designId, screenId } = await params;
   const screenIdNoExt = screenId.replace(/\.png$/i, "");
   const buf = await readImage(designId, screenIdNoExt);
-  if (!buf) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if (!buf) return NextResponse.json({ error: "Tidak ditemukan" }, { status: 404 });
   return new NextResponse(new Uint8Array(buf), {
     headers: {
       "Content-Type": "image/png",

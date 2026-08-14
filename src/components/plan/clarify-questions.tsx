@@ -84,7 +84,7 @@ export function ClarifyQuestions({
               )}
               {noteVisible && (
                 <Input
-                  placeholder="Add a detail..."
+                  placeholder="Tambah detail..."
                   value={answers[q.id]?.note ?? ""}
                   onChange={(e) => setNote(q.id, e.target.value)}
                   className="mt-1"
@@ -97,10 +97,10 @@ export function ClarifyQuestions({
 
       <div className="flex items-center gap-3 pt-1">
         <Button onClick={() => onSubmit(answers)} disabled={!allAnswered || submitting}>
-          {submitting ? "Generating..." : "Generate PRD"}
+          {submitting ? "Membuat..." : "Buat PRD"}
         </Button>
         <Button variant="link" size="sm" onClick={onSkip} disabled={submitting}>
-          Skip questions, generate directly
+          Lewati pertanyaan, langsung buat
         </Button>
       </div>
     </div>

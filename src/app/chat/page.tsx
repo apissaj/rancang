@@ -61,7 +61,7 @@ export default function ChatPage() {
     const firstUser = msgs.find((m) => m.role === "user");
     const conversation: Conversation = {
       id,
-      title: firstUser ? firstUser.content.slice(0, 60) : "New chat",
+      title: firstUser ? firstUser.content.slice(0, 60) : "Chat baru",
       createdAt: conversations.find((c) => c.id === id)?.createdAt ?? Date.now(),
       messages: msgs,
     };
@@ -113,7 +113,7 @@ export default function ChatPage() {
         );
       });
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Something went wrong";
+      const message = err instanceof Error ? err.message : "Terjadi kesalahan";
       setMessages((prev) =>
         prev.map((m) => (m.id === assistantMsg.id ? { ...m, content: `Error: ${message}` } : m))
       );
@@ -144,7 +144,7 @@ export default function ChatPage() {
             });
           });
         } catch (err) {
-          const message = err instanceof Error ? err.message : "Something went wrong";
+          const message = err instanceof Error ? err.message : "Terjadi kesalahan";
           setComparison((prev) => {
             if (!prev) return prev;
             return { ...prev, columns: prev.columns.map((c) => (c.model === m ? { ...c, error: message } : c)) };
