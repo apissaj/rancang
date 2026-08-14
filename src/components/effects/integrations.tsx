@@ -1,14 +1,13 @@
 import Reveal from "@/components/effects/reveal";
-import { BrandLogo } from "@/components/effects/brand-logo";
 
 const agents = [
-  { brand: "cursor", name: "Cursor" },
-  { brand: "claude", name: "Claude Code" },
-  { brand: "opencode", name: "OpenCode" },
-  { brand: "githubcopilot", name: "GitHub Copilot" },
-  { brand: "windsurf", name: "Windsurf" },
-  { brand: "n8n", name: "n8n" },
-] as const;
+  { src: "/brand-logos/cursor.svg", name: "Cursor" },
+  { src: "/brand-logos/claude.svg", name: "Claude Code" },
+  { src: "/brand-logos/opencode.svg", name: "OpenCode" },
+  { src: "/brand-logos/github-copilot.svg", name: "GitHub Copilot" },
+  { src: "/brand-logos/windsurf.svg", name: "Windsurf" },
+  { src: "/brand-logos/n8n.svg", name: "n8n" },
+];
 
 export default function Integrations() {
   return (
@@ -23,12 +22,17 @@ export default function Integrations() {
           </p>
         </div>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-          {agents.map(({ brand, name }) => (
+          {agents.map(({ src, name }) => (
             <div
               key={name}
               className="flex items-center justify-center gap-2 rounded-sm border border-border bg-card/60 px-4 py-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
             >
-              <BrandLogo brand={brand} className="size-6 shrink-0" />
+              <img
+                src={src}
+                alt={`${name} logo`}
+                className="h-5 w-auto shrink-0"
+                loading="lazy"
+              />
               {name}
             </div>
           ))}
