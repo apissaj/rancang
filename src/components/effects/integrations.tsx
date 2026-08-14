@@ -14,8 +14,11 @@ export default function Integrations() {
     <section className="mt-20 sm:mt-28">
       <Reveal>
         <div className="mb-6 text-center">
-          <h2 className="text-2xl font-semibold tracking-tight text-foreground">
-            Kompatibel dengan coding agent favoritmu
+          <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+            Ekosistem
+          </div>
+          <h2 className="mt-1 text-2xl font-semibold tracking-tight text-foreground">
+            Bekerja dengan coding agent favoritmu
           </h2>
           <p className="mt-2 text-sm text-muted-foreground">
             Ekspor blueprint ke markdown — jalan di agent mana pun

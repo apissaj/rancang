@@ -38,8 +38,11 @@ export default function Testimonials() {
     <section className="mt-20 sm:mt-28">
       <Reveal>
         <div className="mb-8 border-b border-border pb-4">
-          <h2 className="text-2xl font-semibold tracking-tight text-foreground">
-            Kata mereka yang pakai
+          <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+            Testimoni
+          </div>
+          <h2 className="mt-1 text-2xl font-semibold tracking-tight text-foreground">
+            Dipercaya developer dan tim produk
           </h2>
           <p className="mt-2 text-sm text-muted-foreground">
             Dari developer solo sampai tim produk

@@ -24,10 +24,15 @@ export default function HowItWorks() {
     <section className="mt-20 sm:mt-28">
       <Reveal>
         <div className="mb-8 flex items-end justify-between border-b border-border pb-4">
-          <h2 className="text-2xl font-semibold tracking-tight text-foreground">
-            Cara kerja
-          </h2>
-          <span className="text-sm text-muted-foreground">Tiga langkah</span>
+          <div>
+            <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              Proses
+            </div>
+            <h2 className="mt-1 text-2xl font-semibold tracking-tight text-foreground">
+              Dari ide ke blueprint dalam tiga langkah
+            </h2>
+          </div>
+          <span className="hidden text-sm text-muted-foreground sm:block">Tiga langkah</span>
         </div>
         <div className="grid gap-px overflow-hidden rounded-sm border border-border bg-border sm:grid-cols-3">
           {steps.map(({ icon: Icon, title, desc }, i) => (

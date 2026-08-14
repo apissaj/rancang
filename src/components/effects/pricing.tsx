@@ -57,8 +57,11 @@ export default function Pricing() {
     <section className="mt-20 sm:mt-28">
       <Reveal>
         <div className="mb-8 border-b border-border pb-4">
-          <h2 className="text-2xl font-semibold tracking-tight text-foreground">
-            Harga sederhana dan transparan
+          <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+            Harga
+          </div>
+          <h2 className="mt-1 text-2xl font-semibold tracking-tight text-foreground">
+            Investasi yang jelas, mulai gratis
           </h2>
           <p className="mt-2 text-sm text-muted-foreground">
             Mulai gratis, upgrade kalau butuh lebih

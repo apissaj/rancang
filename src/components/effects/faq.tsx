@@ -25,7 +25,12 @@ export default function FAQ() {
     <section className="mt-20 sm:mt-28">
       <Reveal>
         <div className="mb-8 border-b border-border pb-4">
-          <h2 className="text-2xl font-semibold tracking-tight text-foreground">FAQ</h2>
+          <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+            Bantuan
+          </div>
+          <h2 className="mt-1 text-2xl font-semibold tracking-tight text-foreground">
+            Pertanyaan yang sering diajukan
+          </h2>
         </div>
         <div className="divide-y divide-border border-y border-border">
           {faqs.map(({ q, a }) => (

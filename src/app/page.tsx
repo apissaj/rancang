@@ -141,8 +141,15 @@ export default function Home() {
         <section className="mt-20 sm:mt-28">
           <Reveal start={ready} delay={450}>
             <div className="mb-6 flex items-end justify-between border-b border-border pb-4">
-              <h2 className="text-2xl font-semibold tracking-tight text-foreground">Alat</h2>
-              <span className="text-sm text-muted-foreground">Semua lewat gateway kamu</span>
+              <div>
+                <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                  Fitur
+                </div>
+                <h2 className="mt-1 text-2xl font-semibold tracking-tight text-foreground">
+                  Terintegrasi dengan alur kerja kamu
+                </h2>
+              </div>
+              <span className="hidden text-sm text-muted-foreground sm:block">Semua lewat gateway kamu</span>
             </div>
             <div className="grid gap-px overflow-hidden rounded-sm border border-border bg-border sm:grid-cols-2 lg:grid-cols-4">
               {tools.map(({ href, icon: Icon, title, description, cta }) => (

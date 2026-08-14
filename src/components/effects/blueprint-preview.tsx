@@ -49,8 +49,11 @@ export default function BlueprintPreview() {
     <section className="mt-20 sm:mt-28">
       <Reveal>
         <div className="mb-8 border-b border-border pb-4">
-          <h2 className="text-2xl font-semibold tracking-tight text-foreground">
-            Lihat blueprint-nya seperti apa
+          <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+            Output
+          </div>
+          <h2 className="mt-1 text-2xl font-semibold tracking-tight text-foreground">
+            Satu ide, blueprint lengkap
           </h2>
           <p className="mt-2 text-sm text-muted-foreground">
             Contoh nyata output dari satu kalimat ide
