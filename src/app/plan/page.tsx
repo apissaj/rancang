@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { nanoid } from "nanoid";
 import { Check, Copy, Download, FileText, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -59,6 +59,8 @@ export default function PlanPage() {
   const [multiMode, setMultiMode] = useState(true);
   const [docs, setDocs] = useState<Record<string, string>>({});
   const [activeDoc, setActiveDoc] = useState("prd");
+  // Tracks the latest streamed content so a mid-stream failure can still save a partial draft.
+  const partialRef = useRef<{ markdown: string; docs: Record<string, string> }>({ markdown: "", docs: {} });
   const DOC_NAMES = ["prd", "spec", "plan", "tasks"] as const;
 
   useEffect(() => {
@@ -117,6 +119,7 @@ export default function PlanPage() {
       if (done) break;
       full += decoder.decode(value, { stream: true });
       onChunk(full);
+      partialRef.current = { markdown: full, docs: { prd: full } };
     }
     return full;
   };
@@ -158,10 +161,12 @@ export default function PlanPage() {
         buffer = tail.slice(tail.length - keep);
       }
       setDocs({ ...collected });
+      partialRef.current = { markdown: collected.prd, docs: { ...collected } };
     }
     // flush remaining buffer
     if (buffer) collected[currentDoc] += buffer;
     setDocs({ ...collected });
+    partialRef.current = { markdown: collected.prd, docs: { ...collected } };
     return collected;
   };
 
@@ -171,6 +176,19 @@ export default function PlanPage() {
     setActiveId(null);
     setClarify(null);
     const ideaText = idea;
+    const now = Date.now();
+    const recordId = nanoid();
+    const draftRecord: PlanRecord = {
+      id: recordId,
+      title: ideaText.slice(0, 60),
+      idea: ideaText,
+      markdown: "",
+      createdAt: now,
+      versions: [],
+    };
+    // Save a draft record immediately so navigation/refresh mid-stream never loses the plan.
+    planStore.save(draftRecord);
+    setPlans(planStore.all());
 
     if (compareMode && compareModels.length >= 2) {
       setLoading(true);
@@ -203,6 +221,8 @@ export default function PlanPage() {
           }
         })
       );
+      // Draft record (empty) is only useful if nothing else saved; remove it.
+      planStore.remove(recordId);
       setPlans(planStore.all());
       setLoading(false);
       return;
@@ -219,13 +239,9 @@ export default function PlanPage() {
       } else {
         full = await streamOne(ideaText, model, answers, setMarkdown);
       }
-      const now = Date.now();
       const record: PlanRecord = {
-        id: nanoid(),
-        title: ideaText.slice(0, 60),
-        idea: ideaText,
+        ...draftRecord,
         markdown: full,
-        createdAt: now,
         versions: [{ id: nanoid(), markdown: full, createdAt: now, source: "generated" }],
       };
       planStore.save(record);
@@ -237,6 +253,19 @@ export default function PlanPage() {
       setIdea("");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Terjadi kesalahan");
+      // Preserve whatever streamed so far as a recoverable draft instead of an empty shell.
+      const partial = partialRef.current;
+      if (partial.markdown) {
+        const partialRecord: PlanRecord = {
+          ...draftRecord,
+          markdown: partial.markdown,
+          versions: [{ id: nanoid(), markdown: partial.markdown, createdAt: now, source: "generated" }],
+        };
+        planStore.save(partialRecord);
+        setPlans(planStore.all());
+        setActiveId(partialRecord.id);
+        setMarkdown(partial.markdown);
+      }
     } finally {
       setLoading(false);
     }

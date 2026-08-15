@@ -54,8 +54,14 @@ export function PlanSidebar({
                 {p.title}
               </span>
               <span className="truncate pl-[18px] text-[11px] text-muted-foreground">
-                {timeAgo(p.createdAt)}
-                {p.versions.length > 1 && ` · v${p.versions.length}`}
+                {p.markdown ? (
+                  <>
+                    {timeAgo(p.createdAt)}
+                    {p.versions.length > 1 && ` · v${p.versions.length}`}
+                  </>
+                ) : (
+                  <span className="italic text-muted-foreground/60">draft — belum selesai</span>
+                )}
               </span>
             </button>
           ))}

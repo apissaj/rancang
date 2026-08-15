@@ -99,6 +99,9 @@ export const planStore = {
     all.unshift(plan);
     write(planKey(), all.slice(0, PLAN_LIMIT));
   },
+  remove: (id: string) => {
+    write(planKey(), read<PlanRecord>(planKey()).filter((p) => p.id !== id));
+  },
 };
 
 export type ScreenComponent = { type: string; label: string; onClick?: string };
