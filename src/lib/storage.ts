@@ -87,13 +87,42 @@ export const conversationStore = {
 // Old localStorage records predate the `versions` field; synthesize a single
 // v1 entry from markdown/createdAt so they load without crashing. Also backfill
 // docs.prd from markdown for records saved before multi-doc storage existed.
+//
+// If the old markdown still contains `<!-- DOC:xxx -->` markers (saved by the
+// buggy stream parser that dumped everything into one blob), split it back into
+// per-document docs so the spec/plan/tasks tabs show their own content.
 function migratePlan(p: PlanRecord & { versions?: PlanVersion[] }): PlanRecord {
   const migrated: PlanRecord = {
     ...p,
     versions: p.versions && p.versions.length > 0 ? p.versions : [{ id: `${p.id}-v1`, markdown: p.markdown, createdAt: p.createdAt, source: "generated" }],
   };
   if (!migrated.docs || Object.keys(migrated.docs).length === 0) {
-    if (migrated.markdown) migrated.docs = { prd: migrated.markdown };
+    if (migrated.markdown) {
+      const DOC_MARKER = /<!-- DOC:(\w+) -->/g;
+      let currentDoc = "prd";
+      const collected: Record<string, string> = {};
+      let pos = 0;
+      let m: RegExpExecArray | null;
+      DOC_MARKER.lastIndex = 0;
+      let found = false;
+      while ((m = DOC_MARKER.exec(migrated.markdown)) !== null) {
+        found = true;
+        const before = migrated.markdown.slice(pos, m.index);
+        if (before.trim()) collected[currentDoc] = (collected[currentDoc] || "") + before;
+        currentDoc = m[1];
+        pos = m.index + m[0].length;
+      }
+      if (found) {
+        const rest = migrated.markdown.slice(pos);
+        if (rest.trim()) collected[currentDoc] = (collected[currentDoc] || "") + rest;
+        // Only adopt the split if we actually found at least 2 docs — a single
+        // "prd" with no markers falls back to the old behaviour.
+        if (Object.keys(collected).length >= 2) migrated.docs = collected;
+        else migrated.docs = { prd: migrated.markdown };
+      } else {
+        migrated.docs = { prd: migrated.markdown };
+      }
+    }
   }
   return migrated;
 }
