@@ -27,6 +27,8 @@ export type PlanRecord = {
   markdown: string;
   createdAt: number;
   versions: PlanVersion[];
+  /** Multi-document content (prd/spec/plan/tasks). Populated for multiMode generations. */
+  docs?: Record<string, string>;
 };
 
 const PLAN_LIMIT = 5;
@@ -83,13 +85,17 @@ export const conversationStore = {
 };
 
 // Old localStorage records predate the `versions` field; synthesize a single
-// v1 entry from markdown/createdAt so they load without crashing.
+// v1 entry from markdown/createdAt so they load without crashing. Also backfill
+// docs.prd from markdown for records saved before multi-doc storage existed.
 function migratePlan(p: PlanRecord & { versions?: PlanVersion[] }): PlanRecord {
-  if (p.versions && p.versions.length > 0) return p as PlanRecord;
-  return {
+  const migrated: PlanRecord = {
     ...p,
-    versions: [{ id: `${p.id}-v1`, markdown: p.markdown, createdAt: p.createdAt, source: "generated" }],
+    versions: p.versions && p.versions.length > 0 ? p.versions : [{ id: `${p.id}-v1`, markdown: p.markdown, createdAt: p.createdAt, source: "generated" }],
   };
+  if (!migrated.docs || Object.keys(migrated.docs).length === 0) {
+    if (migrated.markdown) migrated.docs = { prd: migrated.markdown };
+  }
+  return migrated;
 }
 
 export const planStore = {

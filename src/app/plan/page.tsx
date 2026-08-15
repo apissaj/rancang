@@ -233,8 +233,9 @@ export default function PlanPage() {
     setDocs({});
     try {
       let full: string;
+      let collected: Record<string, string> | undefined;
       if (multiMode) {
-        const collected = await streamMultiDocs(ideaText, model, answers);
+        collected = await streamMultiDocs(ideaText, model, answers);
         full = collected.prd;
       } else {
         full = await streamOne(ideaText, model, answers, setMarkdown);
@@ -242,6 +243,7 @@ export default function PlanPage() {
       const record: PlanRecord = {
         ...draftRecord,
         markdown: full,
+        docs: multiMode && collected ? { ...collected } : undefined,
         versions: [{ id: nanoid(), markdown: full, createdAt: now, source: "generated" }],
       };
       planStore.save(record);
@@ -259,6 +261,7 @@ export default function PlanPage() {
         const partialRecord: PlanRecord = {
           ...draftRecord,
           markdown: partial.markdown,
+          docs: Object.keys(partial.docs).length > 0 ? { ...partial.docs } : undefined,
           versions: [{ id: nanoid(), markdown: partial.markdown, createdAt: now, source: "generated" }],
         };
         planStore.save(partialRecord);
@@ -312,6 +315,8 @@ export default function PlanPage() {
     setActiveId(id);
     setIdea(plan.idea);
     setMarkdown(plan.markdown);
+    setDocs(plan.docs ?? {});
+    setActiveDoc(plan.docs?.prd ? "prd" : "prd");
     setError(null);
     setClarify(null);
     setCompareColumns(null);
@@ -324,7 +329,7 @@ export default function PlanPage() {
   const versions = activePlan?.versions ?? [];
   const viewedVersion = viewingVersionId ? versions.find((v) => v.id === viewingVersionId) ?? null : null;
   const displayedMarkdown = viewedVersion ? viewedVersion.markdown : markdown;
-  const currentDocContent = multiMode ? docs[activeDoc] || "" : displayedMarkdown;
+  const currentDocContent = multiMode && Object.keys(docs).length > 0 ? docs[activeDoc] || "" : displayedMarkdown;
 
   const persistNewVersion = (record: PlanRecord, version: PlanVersion) => {
     const updated: PlanRecord = { ...record, markdown: version.markdown, versions: [...record.versions, version] };
@@ -680,7 +685,7 @@ export default function PlanPage() {
                   className="h-full min-h-[300px] resize-none font-mono text-xs"
                 />
               ) : displayedMarkdown || (multiMode && docs[activeDoc]) ? (
-                <Markdown content={multiMode ? docs[activeDoc] || "" : displayedMarkdown} />
+                <Markdown content={multiMode && docs[activeDoc] ? docs[activeDoc] : displayedMarkdown} />
               ) : (
                 <div className="flex h-full min-h-[300px] flex-col items-center justify-center gap-3 p-8 text-center">
                   <div className="flex size-14 items-center justify-center rounded-lg border bg-muted/30">
