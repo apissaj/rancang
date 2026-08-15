@@ -137,34 +137,36 @@ export default function PlanPage() {
     let currentDoc = "prd";
     const collected: Record<string, string> = { prd: "", spec: "", plan: "", tasks: "" };
     const DOC_MARKER = /<!-- DOC:(\w+) -->/g;
+    // Emit content from `s` into `collected`, splitting on markers. Returns the
+    // text AFTER the last marker (may contain a marker split across chunks).
+    const processBuffer = (s: string): string => {
+      DOC_MARKER.lastIndex = 0;
+      let pos = 0;
+      let m: RegExpExecArray | null;
+      let lastMarkerEnd = -1;
+      while ((m = DOC_MARKER.exec(s)) !== null) {
+        const before = s.slice(pos, m.index);
+        if (before) collected[currentDoc] += before;
+        currentDoc = m[1];
+        pos = m.index + m[0].length;
+        lastMarkerEnd = m.index + m[0].length;
+      }
+      return s.slice(pos);
+    };
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
       buffer += decoder.decode(value, { stream: true });
-      // split on markers; content before marker goes to currentDoc
-      let m: RegExpExecArray | null;
-      let lastIndex = 0;
-      DOC_MARKER.lastIndex = 0;
-      while ((m = DOC_MARKER.exec(buffer)) !== null) {
-        const before = buffer.slice(lastIndex, m.index);
-        if (before) collected[currentDoc] += before;
-        currentDoc = m[1];
-        lastIndex = m.index + m[0].length;
-      }
-      const tail = buffer.slice(lastIndex);
-      buffer = "";
-      if (tail) {
-        // could be partial marker — keep last 30 chars in buffer, emit rest
-        const keep = Math.min(tail.length, 40);
-        const emitPart = tail.slice(0, tail.length - keep);
-        if (emitPart) collected[currentDoc] += emitPart;
-        buffer = tail.slice(tail.length - keep);
-      }
+      // Keep the tail (could contain a marker split across chunks) in buffer;
+      // emit everything up to the last marker.
+      const tail = processBuffer(buffer);
+      buffer = tail;
       setDocs({ ...collected });
       partialRef.current = { markdown: collected.prd, docs: { ...collected } };
     }
-    // flush remaining buffer
-    if (buffer) collected[currentDoc] += buffer;
+    // Flush whatever remains (trailing content after the last marker, or a doc
+    // whose marker never arrived).
+    if (buffer.trim()) collected[currentDoc] += buffer;
     setDocs({ ...collected });
     partialRef.current = { markdown: collected.prd, docs: { ...collected } };
     return collected;
