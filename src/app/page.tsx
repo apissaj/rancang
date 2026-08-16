@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { ArrowRight, MessagesSquare, FileText, FileCode2, FileCog, Palette, Cpu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Reveal from "@/components/effects/reveal";
+import LandingBackground from "@/components/effects/landing-background";
 import HeroBand from "@/components/effects/hero-band";
 import HowItWorks from "@/components/effects/how-it-works";
 import Integrations from "@/components/effects/integrations";
@@ -59,11 +60,12 @@ export default function Home() {
   }, []);
 
   return (
-    <>
-      <div
-        className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-6 py-16 transition-opacity duration-700 sm:py-24"
-        style={{ opacity: ready ? 1 : 0 }}
-      >
+      <>
+        <LandingBackground />
+        <div
+          className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-6 py-16 transition-opacity duration-700 sm:py-24"
+          style={{ opacity: ready ? 1 : 0 }}
+        >
         {/* Hero: asymmetric, heavy left column */}
         <section className="grid gap-12 lg:grid-cols-12 lg:gap-8">
           <div className="lg:col-span-7">

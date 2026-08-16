@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { nanoid } from "nanoid";
 import { Check, Copy, Download, FileText, Loader2 } from "lucide-react";
+import JSZip from "jszip";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
@@ -426,6 +427,27 @@ export default function PlanPage() {
     URL.revokeObjectURL(url);
   };
 
+  // Download all available docs (prd/spec/plan/tasks) as a single ZIP file.
+  const downloadAllDocs = async () => {
+    const zip = new JSZip();
+    const folder = zip.folder("prd-docs");
+    let count = 0;
+    DOC_NAMES.forEach((doc) => {
+      const content = docs[doc];
+      if (!content || content.length === 0) return;
+      folder?.file(`${doc}.md`, content);
+      count++;
+    });
+    if (count === 0) return;
+    const blob = await zip.generateAsync({ type: "blob" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "prd-docs.zip";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const copyColumn = async (m: string, content: string) => {
     await navigator.clipboard.writeText(content);
     setCompareColumns((prev) => prev?.map((c) => (c.model === m ? { ...c, copied: true } : c)) ?? prev);
@@ -652,6 +674,12 @@ export default function PlanPage() {
                   <Download className="h-3.5 w-3.5" />
                   {multiMode ? "Unduh .md" : "Unduh"}
                 </Button>
+                {multiMode && Object.values(docs).some((c) => c && c.length > 0) && (
+                  <Button variant="outline" size="sm" onClick={downloadAllDocs} title="Download semua dokumen jadi satu file ZIP">
+                    <Download className="h-3.5 w-3.5" />
+                    Unduh Semua (.zip)
+                  </Button>
+                )}
               </div>
             </div>
             {!editing && (currentDocContent || markdown) && !loading && activePlan && (
