@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { nanoid } from "nanoid";
-import { Check, Copy, Download, FileText, Loader2, Bot, ChevronDown } from "lucide-react";
+import { Check, Copy, Download, FileText, Loader2, Bot, ChevronDown, Sparkles } from "lucide-react";
 import JSZip from "jszip";
 import { Button } from "@/components/ui/button";
 import {
@@ -26,10 +26,15 @@ import { useAuth } from "@/components/auth-provider";
 import { SyncIndicator } from "@/components/sync-indicator";
 import { AuthGate } from "@/components/auth-gate";
 
-const EXAMPLES = [
-  "Aplikasi pelacak kebiasaan di mana pengguna mencatat kebiasaan harian dan melihat streak",
-  "Ekstensi Chrome yang merangkum artikel panjang menjadi 3 poin singkat",
-  "Alat internal untuk agen support mencari dan membalas tiket lebih cepat",
+const TEMPLATES = [
+  { label: "SaaS Dashboard", emoji: "📊", idea: "Dashboard SaaS analytics di mana user melihat metrik bisnis real-time, membuat laporan otomatis, dan mengundang anggota tim dengan role berbeda." },
+  { label: "E-commerce", emoji: "🛒", idea: "Toko online dengan katalog produk, keranjang, checkout, dan riwayat pesanan. Fokus UX mobile-first dan pembayaran mudah." },
+  { label: "Landing Page", emoji: "🚀", idea: "Landing page produk dengan hero, fitur, testimoni, dan form waitlist. Fokus konversi dan loading cepat." },
+  { label: "Mobile App", emoji: "📱", idea: "Aplikasi mobile habit tracker di mana pengguna mencatat kebiasaan harian, melihat streak, dan mendapat pengingat." },
+  { label: "REST API", emoji: "🔌", idea: "REST API untuk manajemen tugas (CRUD) dengan auth JWT, rate limiting, dan dokumentasi OpenAPI." },
+  { label: "Chat Bot", emoji: "🤖", idea: "Chatbot customer service yang menjawab FAQ otomatis, eskalasi ke manusia, dan terintegrasi WhatsApp." },
+  { label: "Internal Tool", emoji: "🛠️", idea: "Alat internal untuk tim support mencari dan membalas tiket lebih cepat, dengan integrasi CRM dan shortcut." },
+  { label: "AI Summarizer", emoji: "✨", idea: "Ekstensi browser yang merangkum artikel panjang menjadi 3 poin singkat dan bisa disimpan ke koleksi." },
 ];
 
 type CompareColumn = {
@@ -552,21 +557,42 @@ export default function PlanPage() {
           <Textarea
             value={idea}
             onChange={(e) => setIdea(e.target.value)}
-            placeholder={`mis. "${EXAMPLES[0]}"\n\nIde lain:\n- ${EXAMPLES[1]}\n- ${EXAMPLES[2]}`}
+            placeholder={`mis. "${TEMPLATES[0].idea}"\n\nIde lain:\n- ${TEMPLATES[1].idea}\n- ${TEMPLATES[2].idea}`}
             className="min-h-[200px] resize-none"
             disabled={!!clarify}
           />
           {!clarify && idea.trim() === "" && (
-            <div className="flex flex-wrap gap-2">
-              {EXAMPLES.map((ex) => (
-                <button
-                  key={ex}
-                  onClick={() => setIdea(ex)}
-                  className="rounded-md border bg-muted/40 px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:border-foreground/40 hover:bg-muted hover:text-foreground"
-                >
-                  {ex.slice(0, 48)}{ex.length > 48 ? "…" : ""}
-                </button>
-              ))}
+            <div className="flex flex-wrap items-center gap-2">
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  render={
+                    <Button variant="outline" size="sm" title="Pilih template ide untuk memulai lebih cepat">
+                      <Sparkles className="h-3.5 w-3.5" />
+                      Template Ide
+                      <ChevronDown className="h-3 w-3" />
+                    </Button>
+                  }
+                />
+                <DropdownMenuContent align="start" className="w-80">
+                  {TEMPLATES.map((t) => (
+                    <DropdownMenuItem
+                      key={t.label}
+                      onClick={() => setIdea(t.idea)}
+                      className="flex flex-col items-start gap-0.5"
+                    >
+                      <span className="font-medium">
+                        {t.emoji} {t.label}
+                      </span>
+                      <span className="text-[11px] text-muted-foreground">
+                        {t.idea.slice(0, 70)}{t.idea.length > 70 ? "…" : ""}
+                      </span>
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <span className="text-xs text-muted-foreground">
+                atau tulis ide kamu sendiri di atas
+              </span>
             </div>
           )}
           {!clarify && (
@@ -726,13 +752,13 @@ export default function PlanPage() {
                       }
                     />
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem onSelect={() => downloadAgentExport("AGENTS")}>
+                      <DropdownMenuItem onClick={() => downloadAgentExport("AGENTS")}>
                         AGENTS.md <span className="ml-2 text-[10px] text-muted-foreground">(umum)</span>
                       </DropdownMenuItem>
-                      <DropdownMenuItem onSelect={() => downloadAgentExport("CLAUDE")}>
+                      <DropdownMenuItem onClick={() => downloadAgentExport("CLAUDE")}>
                         CLAUDE.md <span className="ml-2 text-[10px] text-muted-foreground">(Claude Code)</span>
                       </DropdownMenuItem>
-                      <DropdownMenuItem onSelect={() => downloadAgentExport("CURSOR")}>
+                      <DropdownMenuItem onClick={() => downloadAgentExport("CURSOR")}>
                         .cursorrules <span className="ml-2 text-[10px] text-muted-foreground">(Cursor)</span>
                       </DropdownMenuItem>
                     </DropdownMenuContent>
