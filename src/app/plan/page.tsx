@@ -2,9 +2,15 @@
 
 import { useEffect, useRef, useState } from "react";
 import { nanoid } from "nanoid";
-import { Check, Copy, Download, FileText, Loader2 } from "lucide-react";
+import { Check, Copy, Download, FileText, Loader2, Bot, ChevronDown } from "lucide-react";
 import JSZip from "jszip";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -448,6 +454,34 @@ export default function PlanPage() {
     URL.revokeObjectURL(url);
   };
 
+  // Build a single agent-rules markdown file from all available docs, so a
+  // coding agent (Claude Code, Cursor, OpenCode, Copilot, etc.) can consume
+  // the blueprint as context. Choose the target format from the button title.
+  const buildAgentExport = (format: "AGENTS" | "CLAUDE" | "CURSOR"): string => {
+    const heading = format === "AGENTS" ? "AGENTS.md" : format === "CLAUDE" ? "CLAUDE.md" : ".cursorrules";
+    const lead =
+      format === "AGENTS"
+        ? "You are collaborating on this project. Follow the blueprint below."
+        : format === "CLAUDE"
+          ? "You are Claude Code working on this project. Follow the blueprint below."
+          : "Cursor rules: follow the blueprint below while editing this codebase.";
+    const parts: string[] = [`# ${heading}`, "", lead, ""];
+    DOC_NAMES.forEach((doc) => {
+      const content = docs[doc];
+      if (!content || content.length === 0) return;
+      const label = doc.toUpperCase();
+      parts.push(`## ${label}`, "", content.trim(), "");
+    });
+    return parts.join("\n");
+  };
+
+  const downloadAgentExport = (format: "AGENTS" | "CLAUDE" | "CURSOR") => {
+    const content = buildAgentExport(format);
+    if (!content.trim()) return;
+    const name = format === "AGENTS" ? "AGENTS.md" : format === "CLAUDE" ? "CLAUDE.md" : ".cursorrules";
+    downloadMarkdown(content, name);
+  };
+
   const copyColumn = async (m: string, content: string) => {
     await navigator.clipboard.writeText(content);
     setCompareColumns((prev) => prev?.map((c) => (c.model === m ? { ...c, copied: true } : c)) ?? prev);
@@ -679,6 +713,30 @@ export default function PlanPage() {
                     <Download className="h-3.5 w-3.5" />
                     Unduh Semua (.zip)
                   </Button>
+                )}
+                {multiMode && Object.values(docs).some((c) => c && c.length > 0) && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger
+                      render={
+                        <Button variant="outline" size="sm" title="Ekspor blueprint sebagai rules file untuk coding agent">
+                          <Bot className="h-3.5 w-3.5" />
+                          Ekspor untuk Agent
+                          <ChevronDown className="h-3 w-3" />
+                        </Button>
+                      }
+                    />
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onSelect={() => downloadAgentExport("AGENTS")}>
+                        AGENTS.md <span className="ml-2 text-[10px] text-muted-foreground">(umum)</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onSelect={() => downloadAgentExport("CLAUDE")}>
+                        CLAUDE.md <span className="ml-2 text-[10px] text-muted-foreground">(Claude Code)</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onSelect={() => downloadAgentExport("CURSOR")}>
+                        .cursorrules <span className="ml-2 text-[10px] text-muted-foreground">(Cursor)</span>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 )}
               </div>
             </div>
