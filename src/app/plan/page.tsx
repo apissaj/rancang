@@ -652,6 +652,9 @@ export default function PlanPage() {
           )}
           {structure && (
             <div className="flex flex-col gap-4">
+              <div className="flex items-center gap-2">
+                <Stepper current="structure" />
+              </div>
               <div className="flex items-center justify-between">
                 <div>
                   <h2 className="text-lg font-semibold">Struktur Fitur</h2>
@@ -884,6 +887,48 @@ function timeAgo(ts: number): string {
   return `${Math.floor(hours / 24)}h lalu`;
 }
 
+const STEPS = ["structure", "prd", "task"] as const;
+type StepKey = (typeof STEPS)[number];
+
+const STEP_LABEL: Record<StepKey, string> = {
+  structure: "Struktur",
+  prd: "PRD",
+  task: "Task",
+};
+
+function Stepper({ current }: { current: StepKey }) {
+  const activeIdx = STEPS.indexOf(current);
+  return (
+    <ol className="flex items-center gap-2 text-sm">
+      {STEPS.map((s, i) => {
+        const done = i < activeIdx;
+        const active = i === activeIdx;
+        return (
+          <li key={s} className="flex items-center gap-2">
+            <span
+              className={
+                "flex h-6 w-6 items-center justify-center rounded-full border text-xs font-semibold " +
+                (active
+                  ? "border-primary bg-primary text-primary-foreground"
+                  : done
+                    ? "border-emerald-500 bg-emerald-500/15 text-emerald-500"
+                    : "border-foreground/20 text-muted-foreground")
+              }
+            >
+              {done ? "✓" : i + 1}
+            </span>
+            <span className={active ? "font-medium" : "text-muted-foreground"}>
+              {STEP_LABEL[s]}
+            </span>
+            {i < STEPS.length - 1 && (
+              <span className="mx-1 h-px w-8 bg-border" aria-hidden="true" />
+            )}
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
 function versionLabel(v: PlanVersion, index: number): string {
   const sourceLabel = v.source === "generated" ? "Dibuat" : v.source === "manual-edit" ? "Edit manual" : "Edit AI";
   return `v${index + 1} · ${sourceLabel} · ${timeAgo(v.createdAt)}`;

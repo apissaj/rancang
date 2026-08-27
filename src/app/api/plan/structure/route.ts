@@ -13,6 +13,7 @@ sub-features under each feature.
 Respond with ONLY valid JSON, no markdown code fences, no commentary, matching exactly this shape:
 {
   "planning": "one short phrase naming the overall planning theme / product goal",
+  "planningNote": "one short subtitle or approach tag (e.g. 'Parametrisasi'), can be empty string",
   "fitur": [
     {
       "name": "feature name",
