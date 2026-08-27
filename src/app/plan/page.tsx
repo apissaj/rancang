@@ -540,7 +540,7 @@ export default function PlanPage() {
       </div>
 
       <div className="flex flex-1 flex-col gap-4 overflow-auto p-4 lg:flex-row lg:overflow-hidden lg:p-6">
-        <div className="flex flex-col gap-3 lg:w-1/3">
+        <div className={"flex flex-col gap-3 " + (structure ? "lg:w-full" : "lg:w-1/3")}>
           <div>
             <h1 className="text-xl font-semibold tracking-tight">Jelaskan ide kamu</h1>
             <p className="mt-1 text-sm text-muted-foreground">
@@ -652,16 +652,8 @@ export default function PlanPage() {
           )}
           {structure && (
             <div className="flex flex-col gap-4">
-              <div className="flex items-center gap-2">
-                <Stepper current="structure" />
-              </div>
               <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-lg font-semibold">Struktur Fitur</h2>
-                  <p className="text-sm text-muted-foreground">
-                    Tinjau peta fitur & sub-fitur di bawah, lalu lanjutkan ke PRD.
-                  </p>
-                </div>
+                <Stepper current="structure" />
                 <Button onClick={continueToPrd} disabled={loading}>
                   Lanjutkan
                   <ChevronRight className="h-4 w-4" />
@@ -672,7 +664,7 @@ export default function PlanPage() {
           )}
         </div>
 
-        {compareColumns ? (
+        {!structure && (compareColumns ? (
           <div className="flex flex-1 flex-col overflow-hidden rounded-xl border shadow-sm lg:w-2/3">
             <div className="grid flex-1 grid-cols-1 divide-y overflow-auto sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-3">
               {compareColumns.map((col) => (
@@ -868,7 +860,7 @@ export default function PlanPage() {
               )}
             </div>
           </div>
-        )}
+        ))}
       </div>
     </div>
     </AuthGate>
