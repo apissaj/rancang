@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { nanoid } from "nanoid";
-import { Check, Copy, Download, FileText, Loader2, Bot, ChevronDown, Sparkles } from "lucide-react";
+import { Check, Copy, Download, FileText, Loader2, Bot, ChevronDown, Bookmark } from "lucide-react";
 import JSZip from "jszip";
 import { Button } from "@/components/ui/button";
 import {
@@ -27,14 +27,14 @@ import { SyncIndicator } from "@/components/sync-indicator";
 import { AuthGate } from "@/components/auth-gate";
 
 const TEMPLATES = [
-  { label: "SaaS Dashboard", emoji: "📊", idea: "Dashboard SaaS analytics di mana user melihat metrik bisnis real-time, membuat laporan otomatis, dan mengundang anggota tim dengan role berbeda." },
-  { label: "E-commerce", emoji: "🛒", idea: "Toko online dengan katalog produk, keranjang, checkout, dan riwayat pesanan. Fokus UX mobile-first dan pembayaran mudah." },
-  { label: "Landing Page", emoji: "🚀", idea: "Landing page produk dengan hero, fitur, testimoni, dan form waitlist. Fokus konversi dan loading cepat." },
-  { label: "Mobile App", emoji: "📱", idea: "Aplikasi mobile habit tracker di mana pengguna mencatat kebiasaan harian, melihat streak, dan mendapat pengingat." },
-  { label: "REST API", emoji: "🔌", idea: "REST API untuk manajemen tugas (CRUD) dengan auth JWT, rate limiting, dan dokumentasi OpenAPI." },
-  { label: "Chat Bot", emoji: "🤖", idea: "Chatbot customer service yang menjawab FAQ otomatis, eskalasi ke manusia, dan terintegrasi WhatsApp." },
-  { label: "Internal Tool", emoji: "🛠️", idea: "Alat internal untuk tim support mencari dan membalas tiket lebih cepat, dengan integrasi CRM dan shortcut." },
-  { label: "AI Summarizer", emoji: "✨", idea: "Ekstensi browser yang merangkum artikel panjang menjadi 3 poin singkat dan bisa disimpan ke koleksi." },
+  { label: "SaaS Dashboard", idea: "Dashboard SaaS analytics di mana user melihat metrik bisnis real-time, membuat laporan otomatis, dan mengundang anggota tim dengan role berbeda." },
+  { label: "E-commerce", idea: "Toko online dengan katalog produk, keranjang, checkout, dan riwayat pesanan. Fokus UX mobile-first dan pembayaran mudah." },
+  { label: "Landing Page", idea: "Landing page produk dengan hero, fitur, testimoni, dan form waitlist. Fokus konversi dan loading cepat." },
+  { label: "Mobile App", idea: "Aplikasi mobile habit tracker di mana pengguna mencatat kebiasaan harian, melihat streak, dan mendapat pengingat." },
+  { label: "REST API", idea: "REST API untuk manajemen tugas (CRUD) dengan auth JWT, rate limiting, dan dokumentasi OpenAPI." },
+  { label: "Chat Bot", idea: "Chatbot customer service yang menjawab FAQ otomatis, eskalasi ke manusia, dan terintegrasi WhatsApp." },
+  { label: "Internal Tool", idea: "Alat internal untuk tim support mencari dan membalas tiket lebih cepat, dengan integrasi CRM dan shortcut." },
+  { label: "AI Summarizer", idea: "Ekstensi browser yang merangkum artikel panjang menjadi 3 poin singkat dan bisa disimpan ke koleksi." },
 ];
 
 type CompareColumn = {
@@ -567,7 +567,7 @@ export default function PlanPage() {
                 <DropdownMenuTrigger
                   render={
                     <Button variant="outline" size="sm" title="Pilih template ide untuk memulai lebih cepat">
-                      <Sparkles className="h-3.5 w-3.5" />
+                      <Bookmark className="h-3.5 w-3.5" />
                       Template Ide
                       <ChevronDown className="h-3 w-3" />
                     </Button>
@@ -581,7 +581,7 @@ export default function PlanPage() {
                       className="flex flex-col items-start gap-0.5"
                     >
                       <span className="font-medium">
-                        {t.emoji} {t.label}
+                        {t.label}
                       </span>
                       <span className="text-[11px] text-muted-foreground">
                         {t.idea.slice(0, 70)}{t.idea.length > 70 ? "…" : ""}
