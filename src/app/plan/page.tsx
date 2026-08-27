@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { nanoid } from "nanoid";
-import { Check, Copy, Download, FileText, Loader2, Bot, ChevronDown, Bookmark } from "lucide-react";
+import { Check, Copy, Download, FileText, Loader2, Bot, ChevronDown, ChevronRight, Bookmark } from "lucide-react";
 import JSZip from "jszip";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,9 +18,10 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Markdown } from "@/components/markdown";
 import { PlanSidebar } from "@/components/plan/plan-sidebar";
+import FeatureMap from "@/components/plan/feature-map";
 import { ClarifyQuestions, type QuestionAnswers } from "@/components/plan/clarify-questions";
 import { planStore, type PlanRecord, type PlanVersion } from "@/lib/storage";
-import type { ClarifyResponse } from "@/lib/clarify-types";
+import type { ClarifyResponse, StructureResponse } from "@/lib/clarify-types";
 import { useSync } from "@/lib/use-sync";
 import { useAuth } from "@/components/auth-provider";
 import { SyncIndicator } from "@/components/sync-indicator";
@@ -55,6 +56,8 @@ export default function PlanPage() {
   const [copied, setCopied] = useState(false);
   const [clarifying, setClarifying] = useState(false);
   const [clarify, setClarify] = useState<ClarifyResponse | null>(null);
+  const [mapping, setMapping] = useState(false);
+  const [structure, setStructure] = useState<StructureResponse | null>(null);
   const sync = useSync();
   const { storageVersion } = useAuth();
 
@@ -320,7 +323,40 @@ export default function PlanPage() {
       selected: answers[q.id]?.selected ?? [],
       note: answers[q.id]?.note,
     }));
-    generatePrd(payload);
+    buildStructure(payload);
+  };
+
+  // After clarify, ask the LLM for a 3-level feature structure, then show it
+  // as a mind-map before generating the full PRD.
+  const buildStructure = async (answers: Array<{ question: string; selected: string[]; note?: string }>) => {
+    setMapping(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/plan/structure", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ idea, answers, model: model || undefined }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      const data = (await res.json()) as StructureResponse;
+      setStructure(data);
+    } catch (err) {
+      console.warn("Structure step failed, falling back to direct generation:", err);
+      generatePrd(answers);
+    } finally {
+      setMapping(false);
+    }
+  };
+
+  const continueToPrd = () => {
+    const answers = clarify?.questions.map((q) => ({
+      question: q.question,
+      selected: [] as string[],
+      note: undefined as string | undefined,
+    }));
+    setStructure(null);
+    setClarify(null);
+    generatePrd(answers ?? []);
   };
 
   const loadPlan = (id: string) => {
@@ -613,6 +649,23 @@ export default function PlanPage() {
               onSkip={() => generatePrd()}
               submitting={loading}
             />
+          )}
+          {structure && (
+            <div className="flex flex-col gap-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-lg font-semibold">Struktur Fitur</h2>
+                  <p className="text-sm text-muted-foreground">
+                    Tinjau peta fitur & sub-fitur di bawah, lalu lanjutkan ke PRD.
+                  </p>
+                </div>
+                <Button onClick={continueToPrd} disabled={loading}>
+                  Lanjutkan
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+              <FeatureMap data={structure} />
+            </div>
           )}
         </div>
 
