@@ -2,12 +2,20 @@
 
 import { useEffect, useRef, useState } from "react";
 import { nanoid } from "nanoid";
+import { Download, ChevronDown } from "lucide-react";
 import { ChatSidebar } from "@/components/chat/chat-sidebar";
 import { Composer } from "@/components/chat/composer";
 import { MessageBubble } from "@/components/chat/message-bubble";
 import { Greeting } from "@/components/chat/greeting";
 import { ComparisonView, type ComparisonColumn } from "@/components/chat/comparison-view";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { streamChat } from "@/hooks/use-chat-stream";
 import { conversationStore, type Conversation, type ChatMessageRecord } from "@/lib/storage";
 import { useSync } from "@/lib/use-sync";
@@ -162,6 +170,39 @@ export default function ChatPage() {
 
   const busy = streamingId !== null || (comparison ? comparison.columns.some((c) => !c.done) : false);
 
+  // Export the current chat (single or comparison) as a Markdown file.
+  const buildChatExport = (): string => {
+    if (comparison) {
+      const parts: string[] = [`# Chat Multi-Model`, "", `**Prompt:** ${comparison.prompt}`, ""];
+      comparison.columns.forEach((col) => {
+        parts.push(`## ${col.model}`, "", col.error ? `> Error: ${col.error}` : (col.content || "_(kosong)_"), "");
+      });
+      return parts.join("\n");
+    }
+    if (messages.length === 0) return "";
+    const firstUser = messages.find((m) => m.role === "user");
+    const parts: string[] = [`# Chat${firstUser ? `: ${firstUser.content.slice(0, 80)}` : ""}`, ""];
+    messages.forEach((m) => {
+      const role = m.role === "user" ? "User" : `Assistant (${m.model ?? "?"})`;
+      parts.push(`## ${role}`, "", m.content || "_(kosong)_", "");
+    });
+    return parts.join("\n");
+  };
+
+  const downloadChat = () => {
+    const content = buildChatExport();
+    if (!content.trim()) return;
+    const blob = new Blob([content], { type: "text/markdown;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    const firstUser = messages.find((m) => m.role === "user") ?? comparison?.columns[0];
+    const name = firstUser ? `chat-${(comparison?.prompt ?? firstUser.content).slice(0, 40).replace(/[\\/:*?"<>|]/g, "-")}` : "chat";
+    a.href = url;
+    a.download = `${name}.md`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <AuthGate>
     <div className="flex flex-1 overflow-hidden">
@@ -177,6 +218,26 @@ export default function ChatPage() {
       </div>
 
       <div className="flex flex-1 flex-col overflow-hidden">
+        {(messages.length > 0 || comparison) && (
+          <div className="flex items-center justify-end gap-2 border-b bg-muted/30 px-4 py-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={
+                  <Button variant="outline" size="sm" title="Unduh chat sebagai Markdown">
+                    <Download className="h-3.5 w-3.5" />
+                    Unduh Chat
+                    <ChevronDown className="h-3 w-3" />
+                  </Button>
+                }
+              />
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={downloadChat}>
+                  Markdown (.md)
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        )}
         {comparison ? (
           <ComparisonView prompt={comparison.prompt} columns={comparison.columns} />
         ) : (
