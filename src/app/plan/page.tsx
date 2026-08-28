@@ -58,6 +58,7 @@ export default function PlanPage() {
   const [clarify, setClarify] = useState<ClarifyResponse | null>(null);
   const [mapping, setMapping] = useState(false);
   const [structure, setStructure] = useState<StructureResponse | null>(null);
+  const [lastAnswers, setLastAnswers] = useState<Array<{ question: string; selected: string[]; note?: string }>>([]);
   const sync = useSync();
   const { storageVersion } = useAuth();
 
@@ -331,6 +332,8 @@ export default function PlanPage() {
   const buildStructure = async (answers: Array<{ question: string; selected: string[]; note?: string }>) => {
     setMapping(true);
     setError(null);
+    setLastAnswers(answers);
+    setClarify(null);
     try {
       const res = await fetch("/api/plan/structure", {
         method: "POST",
@@ -349,14 +352,14 @@ export default function PlanPage() {
   };
 
   const continueToPrd = () => {
-    const answers = clarify?.questions.map((q) => ({
-      question: q.question,
-      selected: [] as string[],
-      note: undefined as string | undefined,
-    }));
     setStructure(null);
     setClarify(null);
-    generatePrd(answers ?? []);
+    generatePrd(lastAnswers);
+  };
+
+  const skipClarify = () => {
+    setClarify(null);
+    generatePrd();
   };
 
   const loadPlan = (id: string) => {
@@ -642,11 +645,17 @@ export default function PlanPage() {
             </Button>
           )}
           {error && <p className="text-sm text-destructive">{error}</p>}
+          {mapping && (
+            <div className="flex items-center gap-2 rounded-lg border bg-muted/20 px-3 py-2 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Menyusun struktur fitur & sub-fitur...
+            </div>
+          )}
           {clarify && (
             <ClarifyQuestions
               clarify={clarify}
               onSubmit={submitAnswers}
-              onSkip={() => generatePrd()}
+              onSkip={skipClarify}
               submitting={loading}
             />
           )}
