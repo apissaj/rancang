@@ -664,7 +664,8 @@ export default function PlanPage() {
           )}
         </div>
 
-        {!structure && (compareColumns ? (
+        {!structure && (markdown || Object.values(docs).some((c) => c) || compareColumns) && (
+          compareColumns ? (
           <div className="flex flex-1 flex-col overflow-hidden rounded-xl border shadow-sm lg:w-2/3">
             <div className="grid flex-1 grid-cols-1 divide-y overflow-auto sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-3">
               {compareColumns.map((col) => (
