@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { nanoid } from "nanoid";
-import { Check, Copy, Download, FileText, Loader2, Bot, ChevronDown, ChevronRight, Bookmark, Zap } from "lucide-react";
+import { Check, Copy, Download, FileText, Loader2, Bot, ChevronDown, ChevronRight, Bookmark, Zap, MessageSquare } from "lucide-react";
 import JSZip from "jszip";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,7 +20,8 @@ import { Markdown } from "@/components/markdown";
 import { PlanSidebar } from "@/components/plan/plan-sidebar";
 import FeatureMap from "@/components/plan/feature-map";
 import { ClarifyQuestions, type QuestionAnswers } from "@/components/plan/clarify-questions";
-import { planStore, type PlanRecord, type PlanVersion } from "@/lib/storage";
+import { PlanChat } from "@/components/plan/plan-chat";
+import { planStore, type PlanRecord, type PlanVersion, type BlueprintChatMessage } from "@/lib/storage";
 import type { ClarifyResponse, StructureResponse } from "@/lib/clarify-types";
 import { useSync } from "@/lib/use-sync";
 import { useAuth } from "@/components/auth-provider";
@@ -80,6 +81,10 @@ export default function PlanPage() {
   // re-publishing after an edit updates the same blueprint instead of cloning.
   const mcpIds = useRef<Record<string, string>>({});
   const [activeDoc, setActiveDoc] = useState("prd");
+  const [chatOpen, setChatOpen] = useState(false);
+  // Chat is scoped to the blueprint currently open; keyed by plan id so switching
+  // blueprints in the sidebar doesn't leak one conversation into another.
+  const [chatByPlan, setChatByPlan] = useState<Record<string, BlueprintChatMessage[]>>({});
   // Tracks the latest streamed content so a mid-stream failure can still save a partial draft.
   const partialRef = useRef<{ markdown: string; docs: Record<string, string> }>({ markdown: "", docs: {} });
   const DOC_NAMES = ["prd", "spec", "plan", "tasks"] as const;
@@ -427,6 +432,7 @@ export default function PlanPage() {
     setEditing(false);
     setViewingVersionId(null);
     setAiInstruction("");
+    setChatByPlan((prev) => ({ ...prev, [id]: plan.chat ?? prev[id] ?? [] }));
   };
 
   const activePlan = activeId ? plans.find((p) => p.id === activeId) ?? null : null;
@@ -434,6 +440,14 @@ export default function PlanPage() {
   const viewedVersion = viewingVersionId ? versions.find((v) => v.id === viewingVersionId) ?? null : null;
   const displayedMarkdown = viewedVersion ? viewedVersion.markdown : markdown;
   const currentDocContent = multiMode && Object.keys(docs).length > 0 ? docs[activeDoc] || "" : displayedMarkdown;
+
+  const persistChat = (planId: string, chat: BlueprintChatMessage[]) => {
+    const rec = plans.find((p) => p.id === planId);
+    if (!rec) return;
+    const updated: PlanRecord = { ...rec, chat };
+    planStore.save(updated);
+    setPlans(planStore.all());
+  };
 
   const persistNewVersion = (record: PlanRecord, version: PlanVersion) => {
     const updated: PlanRecord = { ...record, markdown: version.markdown, versions: [...record.versions, version] };
@@ -443,6 +457,37 @@ export default function PlanPage() {
     setMarkdown(updated.markdown);
     setViewingVersionId(null);
     return updated;
+  };
+
+  // Streaming callback from the blueprint chat: while the rewrite streams, only
+  // update the in-memory doc for live preview. On the final call, commit it as a
+  // new version and republish so the MCP blueprint reflects the edit.
+  const applyChatEdit = (docName: string, content: string, final?: boolean) => {
+    const nextDocs = { ...docs, [docName]: content };
+    setDocs(nextDocs);
+
+    if (!final || !activePlan) return;
+
+    const updated: PlanRecord = {
+      ...activePlan,
+      docs: nextDocs,
+      markdown: nextDocs.prd ?? activePlan.markdown,
+      versions: [
+        ...activePlan.versions,
+        {
+          id: nanoid(),
+          markdown: nextDocs.prd ?? activePlan.markdown,
+          createdAt: Date.now(),
+          source: "ai-edit",
+          note: `Chat: ubah ${docName}.md`,
+        },
+      ],
+    };
+    planStore.save(updated);
+    sync.syncPlan(updated);
+    setPlans(planStore.all());
+    setMarkdown(updated.markdown);
+    void publishMCP(updated, { silent: true });
   };
 
   const startEdit = () => {
@@ -826,6 +871,17 @@ export default function PlanPage() {
                     </SelectContent>
                   </Select>
                 )}
+                {!editing && Object.values(docs).some((c) => c && c.trim()) && !loading && (
+                  <Button
+                    variant={chatOpen ? "secondary" : "outline"}
+                    size="sm"
+                    onClick={() => setChatOpen((v) => !v)}
+                    title="Tanya blueprint — jawabnya bisa diterapkan langsung ke dokumen"
+                  >
+                    <MessageSquare className="h-3.5 w-3.5" />
+                    Tanya blueprint
+                  </Button>
+                )}
                 {!editing && currentDocContent && !loading && (
                   <Button variant="outline" size="sm" onClick={startEdit}>
                     Ubah
@@ -949,6 +1005,21 @@ export default function PlanPage() {
                 </div>
               )}
             </div>
+            {chatOpen && activePlan && (
+              <div className="h-80 shrink-0 border-t">
+                <PlanChat
+                  docs={multiMode ? docs : { prd: displayedMarkdown }}
+                  activeDoc={multiMode ? activeDoc : "prd"}
+                  messages={chatByPlan[activePlan.id] ?? []}
+                  onMessagesChange={(next) => {
+                    setChatByPlan((prev) => ({ ...prev, [activePlan.id]: next }));
+                    persistChat(activePlan.id, next);
+                  }}
+                  model={model || undefined}
+                  onApply={(docName, content, final) => applyChatEdit(docName, content, final)}
+                />
+              </div>
+            )}
           </div>
         ))}
       </div>

@@ -1,28 +1,67 @@
 import { streamChatCompletion, toTextDeltaStream } from "@/lib/llm";
 import { getDefaultModel } from "@/lib/models";
+import { buildBlueprintContext, docLabel, type BlueprintDocs } from "@/lib/blueprint-context";
 
 export const dynamic = "force-dynamic";
 
-const SYSTEM_PROMPT = `You are revising an existing PRD based on the user's instruction. Return the FULL revised PRD in the same Markdown structure/sections, not a diff or partial excerpt, no preamble/commentary.`;
-
-function buildUserMessage(markdown: string, instruction: string): string {
-  return `Current PRD:\n---\n${markdown}\n---\n\nInstruction:\n${instruction}`;
+function systemForTarget(target?: string): string {
+  if (target) {
+    const label = docLabel(target);
+    return (
+      `You are revising exactly one document of a larger blueprint: ${label} (${target}.md).\n` +
+      `The other documents are read-only context — do NOT include them in the response.\n` +
+      `Return the FULL revised ${label} and nothing else (no wrapper, no headings added beyond what the ${label} calls for).`
+    );
+  }
+  return "You are revising a single-document blueprint (PRD). Return the FULL revised document in the same structure, not a diff or partial excerpt, no preamble or commentary.";
 }
 
 export async function POST(req: Request) {
-  const { markdown, instruction } = (await req.json()) as { markdown: string; instruction: string };
+  const body = (await req.json()) as {
+    markdown?: string;
+    instruction?: string;
+    docs?: BlueprintDocs;
+    target?: string;
+    model?: string;
+  };
 
-  if (!markdown || !markdown.trim()) {
-    return new Response("markdown is required", { status: 400 });
-  }
-  if (!instruction || !instruction.trim()) {
+  const instruction: string = body.instruction ?? "";
+  if (!instruction.trim()) {
     return new Response("instruction is required", { status: 400 });
   }
 
+  const target: string | undefined = body.target?.trim() || undefined;
+  let currentMarkdown: string;
+  let context: string;
+
+  if (body.docs && Object.values(body.docs).some((v) => v?.trim())) {
+    currentMarkdown = (body.docs[target ?? "prd"] ?? "").trim();
+    if (!currentMarkdown) {
+      return new Response(`Dokumen kosong: target "${target ?? "prd"}" tidak ada. Tidak ada yang perlu direvisi.`, {
+        status: 400,
+      });
+    }
+    context = buildBlueprintContext(body.docs, { exclude: target });
+  } else if (body.markdown?.trim()) {
+    // Legacy shape: single PRD without docs.
+    currentMarkdown = body.markdown;
+    context = "";
+  } else {
+    return new Response("markdown or docs with a matching target is required", { status: 400 });
+  }
+
+  const userMessage =
+    (context
+      ? `The other documents (read-only context — do NOT rewrite them):\n---\n${context}\n---\n\n`
+      : "") +
+    (target
+      ? `Current ${docLabel(target)} (${target}.md):\n---\n${currentMarkdown}\n---\n\nInstruction:\n${instruction}`
+      : `Current PRD:\n---\n${currentMarkdown}\n---\n\nInstruction:\n${instruction}`);
+
   try {
-    const upstream = await streamChatCompletion(getDefaultModel(), [
-      { role: "system", content: SYSTEM_PROMPT },
-      { role: "user", content: buildUserMessage(markdown, instruction) },
+    const upstream = await streamChatCompletion(body.model || getDefaultModel(), [
+      { role: "system", content: systemForTarget(target) },
+      { role: "user", content: userMessage },
     ]);
     return new Response(toTextDeltaStream(upstream.body!), {
       headers: { "Content-Type": "text/plain; charset=utf-8" },
