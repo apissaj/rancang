@@ -14,10 +14,8 @@ export default function FeatureMap({ data }: { data: StructureResponse }) {
   const maxZoom = 1.6;
 
   const fiturCount = data.fitur.length;
-  // Estimated canvas height so the SVG connector layer lines up with rows.
   const rowH = 92;
   const rowGap = 20;
-  const canvasH = 40 + fiturCount * rowH + (fiturCount - 1) * rowGap + 40;
 
   return (
     <div className="relative rounded-xl border bg-card/30 p-4">
