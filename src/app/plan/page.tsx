@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { nanoid } from "nanoid";
-import { Check, Copy, Download, FileText, Loader2, Bot, ChevronDown, ChevronRight, Bookmark } from "lucide-react";
+import { Check, Copy, Download, FileText, Loader2, Bot, ChevronDown, ChevronRight, Bookmark, Zap } from "lucide-react";
 import JSZip from "jszip";
 import { Button } from "@/components/ui/button";
 import {
@@ -74,6 +74,11 @@ export default function PlanPage() {
   const [viewingVersionId, setViewingVersionId] = useState<string | null>(null); // null = current
   const [multiMode, setMultiMode] = useState(true);
   const [docs, setDocs] = useState<Record<string, string>>({});
+  const [mcpBlueprintId, setMcpBlueprintId] = useState<string | null>(null);
+  const [mcpCopied, setMcpCopied] = useState(false);
+  // Maps a local plan id -> the blueprint id the MCP bridge assigned, so
+  // re-publishing after an edit updates the same blueprint instead of cloning.
+  const mcpIds = useRef<Record<string, string>>({});
   const [activeDoc, setActiveDoc] = useState("prd");
   // Tracks the latest streamed content so a mid-stream failure can still save a partial draft.
   const partialRef = useRef<{ markdown: string; docs: Record<string, string> }>({ markdown: "", docs: {} });
@@ -271,6 +276,7 @@ export default function PlanPage() {
       setEditing(false);
       sync.syncPlan(record);
       setIdea("");
+      void publishMCP(record, { silent: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Terjadi kesalahan");
       // Preserve whatever streamed so far as a recoverable draft instead of an empty shell.
@@ -289,6 +295,51 @@ export default function PlanPage() {
       }
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Push a finished blueprint to the MCP bridge so coding agents (Claude Code,
+  // Cursor, Codex, Hermes) can pull it via the rancang_* MCP tools. Runs in the
+  // background: local generation must never fail because the bridge is down.
+  const publishMCP = async (record: PlanRecord, opts?: { silent?: boolean }) => {
+    if (!record.docs || Object.keys(record.docs).length === 0) return;
+    try {
+      const res = await fetch("/api/mcp/blueprint", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: mcpIds.current[record.id],
+          title: record.title,
+          idea: record.idea,
+          model: model,
+          docs: record.docs,
+        }),
+      });
+      if (!res.ok) {
+        if (!opts?.silent) setError("Blueprint tersimpan lokal, tapi gagal dikirim ke MCP bridge.");
+        return;
+      }
+      const data = (await res.json()) as { id: string };
+      mcpIds.current[record.id] = data.id;
+      setMcpBlueprintId(data.id);
+      if (!opts?.silent) setMcpCopied(true);
+    } catch {
+      if (!opts?.silent) setError("Blueprint tersimpan lokal, tapi MCP bridge tidak jalan (port 3110?).");
+    }
+  };
+
+  const copyMcpPrompt = async () => {
+    if (!mcpBlueprintId) return;
+    try {
+      await navigator.clipboard.writeText(
+        `Gunakan MCP server "rancang". Ambil execution prompt blueprint ${mcpBlueprintId} ` +
+          `(tool rancang_execution_prompt, agent: "Claude Code", working_dir: <path>) lalu kerjakan task-nya ` +
+          `satu per satu: rancang_next_task → implementasi + verifikasi → rancang_task_complete.`
+      );
+      setMcpCopied(true);
+      setTimeout(() => setMcpCopied(false), 1500);
+    } catch {
+      setError("Gagal menyalin prompt MCP.");
     }
   };
 
@@ -465,6 +516,12 @@ export default function PlanPage() {
     await navigator.clipboard.writeText(currentDocContent || markdown);
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
+  };
+
+  const publishCurrentBlueprint = async () => {
+    if (!activePlan) return;
+    setMcpCopied(false);
+    await publishMCP(activePlan);
   };
 
   const downloadMarkdown = (content: string, name = "prd.md") => {
@@ -821,6 +878,29 @@ export default function PlanPage() {
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
+                )}
+                {multiMode && Object.values(docs).some((c) => c && c.length > 0) && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={publishCurrentBlueprint}
+                    disabled={!mcpBlueprintId && mcpCopied}
+                    title="Kirim blueprint ini ke MCP bridge (agent Claude Code / Cursor / Codex bisa ambil via rancang_* tools)"
+                  >
+                    <Zap className="h-3.5 w-3.5" />
+                    {mcpBlueprintId ? `Blueprint ${mcpBlueprintId.slice(-6)} · MCP` : "Kirim ke MCP"}
+                  </Button>
+                )}
+                {mcpBlueprintId && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={copyMcpPrompt}
+                    title="Salin prompt siap-tempel untuk agent coding kamu"
+                  >
+                    <Copy className="h-3.5 w-3.5" />
+                    {mcpCopied ? "Prompt tersalin" : "Salin Prompt MCP"}
+                  </Button>
                 )}
               </div>
             </div>
