@@ -26,6 +26,7 @@ Tanpa akun. Tanpa database. Tanpa registrasi. Semua data tetap di browser kamu.
 - [Sekilas](#sekilas)
 - [Stack](#stack)
 - [Arsitektur](#arsitektur)
+- [MCP — Eksekusi Agent](#mcp--eksekusi-agent)
 - [Cara Mulai](#cara-mulai)
 - [Konfigurasi](#konfigurasi)
 - [API Routes](#api-routes)
@@ -45,6 +46,7 @@ Tanpa akun. Tanpa database. Tanpa registrasi. Semua data tetap di browser kamu.
 | **💬 Chat Multi-Model** | Ngobrol dengan model apa pun dari gateway kamu. Aktifkan mode **banding** untuk menjalankan prompt yang sama di 2–3 model sekaligus dan lihat responsnya streaming berdampingan. |
 | **🎨 Generator Desain** | Ide → spesifikasi token `DESIGN.md` (format Google DESIGN.md) + prototipe wireframe (screenshot visual) yang bisa diklik. |
 | **📦 Unduh Semua (.zip)** | Ekspor blueprint sebagai satu file ZIP berisi `prd.md`, `spec.md`, `plan.md`, `tasks.md` — siap dilempar ke coding agent. |
+| **🔌 MCP Server** | Blueprint bisa ditarik langsung oleh Claude Code / Cursor / Codex / Hermes lewat MCP — agent ambil execution prompt sendiri, kerjakan task satu per satu, progres tersimpan dan bisa putus-nyambung. |
 | **🔐 Tanpa Akun** | Data tersimpan di `localStorage`. Tidak ada server-side database, tidak ada registrasi. Buka, pakai, tutup — selesai. |
 | **🌐 Gateway Sendiri** | Semua LLM call lewat Route Handler server-side ke OpenAI-compatible gateway milikmu. API key tidak pernah ke browser. |
 | **📝 Riwayat & Versi** | Setiap blueprint tersimpan otomatis. Bisa diedit, dihapus, atau dipulihkan ke versi sebelumnya. |
@@ -162,6 +164,87 @@ Browser (localStorage)          Server (Next.js)              Gateway (LLM)
 
 ---
 
+## MCP — Eksekusi Agent
+
+Blueprint Rancang bisa ditarik **langsung** oleh AI coding agent lewat [MCP](https://modelcontextprotocol.io) — tanpa ekspor manual. Agent ambil prompt eksekusi, kerjakan task satu per satu, dan progresnya tersimpan.
+
+**Kenapa MCP, bukan cuma ekspor file?** Ekspor `AGENTS.md` itu sekali-jalan: agent dapat contekan tapi nggak tahu sudah sampai mana. MCP bikin loop-nya hidup:
+
+```
+rancang_execution_prompt  → prompt + dokumen inline (awal kerja)
+rancang_next_task         → task berikutnya yang belum selesai
+   ...agent kerja, verifikasi...
+rancang_task_complete     → tick task di tasks.md
+rancang_next_task         → task berikutnya, dst.
+```
+
+Progres disimpan di `~/.rancang/blueprints/<id>.json`, jadi sesi agent bisa **putus-nyambung** tanpa kehilangan posisi.
+
+### 7 Tools
+
+| Tool | Fungsi |
+|---|---|
+| `rancang_list_blueprints` | Daftar blueprint + progres task |
+| `rancang_read_blueprint` | Baca dokumen (bisa pilih: `docs: ["spec","tasks"]`) |
+| `rancang_execution_prompt` | **Utama.** Prompt siap-jalan: instruksi + dokumen inline + working dir |
+| `rancang_next_task` | Task berikutnya yang belum selesai |
+| `rancang_task_complete` | Tick task setelah beneran diimplementasi & diverifikasi |
+| `rancang_save_blueprint` | Agent menulis revisi balik ke Rancang |
+| `rancang_status` | Health check store + blueprint terakhir |
+
+### Menjalankan
+
+```bash
+# stdio — buat Claude Code / Cursor / Codex
+node mcp-server.mjs --stdio
+
+# HTTP (Streamable) — buat Hermes, agent remote, atau lintas origin
+node mcp-server.mjs              # → http://127.0.0.1:3110/mcp
+```
+
+### Menyambungkan ke agent
+
+**Claude Code**
+
+```bash
+claude mcp add rancang -- node "<path-ke-rancang>/mcp-server.mjs" --stdio
+```
+
+**Hermes**
+
+```bash
+hermes mcp add rancang --url http://127.0.0.1:3110/mcp
+```
+
+**Cursor / Codex / klien lain:**
+
+```json
+{
+  "mcpServers": {
+    "rancang": {
+      "command": "node",
+      "args": ["<path-ke-rancang>/mcp-server.mjs", "--stdio"]
+    }
+  }
+}
+```
+
+### Alur pakai
+
+1. Generate blueprint di `/plan` (4 dokumen).
+2. Klik **Kirim ke MCP** → blueprint masuk ke `~/.rancang/blueprints` (juga otomatis terkirim tiap generate sukses).
+3. Agent jalan: ambil execution prompt → kerjakan task → tick → ambil berikutnya.
+
+Agent yang sudah tersambung MCP nggak butuh langkah tempel — cukup bilang:
+
+> Pakai MCP rancang. Ambil execution prompt blueprint terakhir, working dir `D:/projects/foo`, kerjakan task-nya satu per satu.
+
+Dokumentasi lengkap: [`docs/MCP.md`](./docs/MCP.md)
+
+> **Catatan:** MCP server ini local-first — satu user, satu mesin, tanpa auth. Jangan diekspos ke internet apa adanya (transport HTTP hanya listen di `127.0.0.1`).
+
+---
+
 ## Cara Mulai
 
 ### Prasyarat
@@ -242,6 +325,8 @@ PORT=3100 HOSTNAME=0.0.0.0 node .next/standalone/server.js
 | `LLM_MODELS` | ❌ | — | Daftar model dipisah koma. Muncul di model picker. |
 | `LLM_DEFAULT_MODEL` | ❌ | — | Model default untuk chat & generator PRD. |
 | `NODE_ENV` | ❌ | `production` | Environment mode. |
+| `RANCANG_HOME` | ❌ | `~/.rancang` | Folder penyimpanan blueprint yang dibaca MCP server. |
+| `RANCANG_MCP_PORT` | ❌ | `3110` | Port transport HTTP MCP. |
 | `NEXT_PUBLIC_FIREBASE_*` | ❌ | — | 6 variabel Firebase Client SDK. Lihat `.env.example`. |
 | `FIREBASE_SERVICE_ACCOUNT_JSON` | ❌ | — | JSON string service account untuk server-side sync. |
 
@@ -437,7 +522,7 @@ Rancang menyusun struktur PRD otomatis: executive summary, user stories, system 
 Semua data tersimpan di `localStorage` browser kamu. Tidak ada server-side database. Tidak ada tracking. API key gateway hanya dipakai server-side, tidak pernah terekspos ke client.
 
 ### Hasilnya bisa dipakai di coding agent apa aja?
-Output markdown murni — kompatibel dengan Cursor, Claude Code, OpenCode, GitHub Copilot, Windsurf, n8n, dan agent manapun yang bisa membaca file `.md`.
+Dua jalur. **Ekspor file** — output markdown murni, kompatibel dengan Cursor, Claude Code, OpenCode, GitHub Copilot, Windsurf, n8n, dan agent manapun yang bisa membaca file `.md`. **MCP** — agent yang mendukung [MCP](https://modelcontextprotocol.io) (Claude Code, Cursor, Codex, Hermes) bisa menarik execution prompt sendiri, mengerjakan task satu per satu, dan progresnya tersimpan. Lihat [MCP — Eksekusi Agent](#mcp--eksekusi-agent).
 
 ---
 

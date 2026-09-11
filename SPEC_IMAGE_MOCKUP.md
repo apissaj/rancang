@@ -2,7 +2,7 @@ Add real image generation for `/design` screen mockups on this existing Next.js 
 
 ## New env vars (already present in `.env`, already added to NAS deploy env — do not need to add them yourself, just consume via `process.env`)
 ```
-IMAGE_GEN_BASE_URL=http://192.168.1.20:20128/v1
+IMAGE_GEN_BASE_URL=http://localhost:20128/v1
 IMAGE_GEN_API_KEY=sk-...
 IMAGE_GEN_MODEL=cx/gpt-5.5-image
 ```
@@ -32,7 +32,7 @@ export async function generateScreenImage(prompt: string): Promise<string> {
   return `data:image/png;base64,${b64}`; // returned directly as a data URL, ready for an <img src>
 }
 ```
-Verified working (tested manually against the real gateway from the NAS host — confirm this still works from wherever the Next.js server actually runs at build/runtime; if the app server can't reach `192.168.1.20:20128` directly, note that in your report, don't silently swallow the error).
+Verified working (tested manually against the real gateway — confirm this still works from wherever the Next.js server actually runs at build/runtime; if the app server can't reach `IMAGE_GEN_BASE_URL` directly, note that in your report, don't silently swallow the error).
 
 ## New API route — `POST /api/design/image`
 Body: `{ screen: Screen, designMd: string, styleHint?: string }` (styleHint optional, e.g. "flat vector illustration style, mobile app UI screenshot").

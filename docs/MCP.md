@@ -72,7 +72,8 @@ hermes mcp test rancang
 **Claude Code**
 
 ```bash
-claude mcp add rancang -- node "C:/Users/TUF Gaming A15/prd-forge/mcp-server.mjs" --stdio
+# ganti <path-ke-rancang> dengan folder tempat kamu clone repo ini
+claude mcp add rancang -- node "<path-ke-rancang>/mcp-server.mjs" --stdio
 ```
 
 **Cursor / Codex / klien lain** (config JSON yang sama bentuknya):
@@ -82,7 +83,7 @@ claude mcp add rancang -- node "C:/Users/TUF Gaming A15/prd-forge/mcp-server.mjs
   "mcpServers": {
     "rancang": {
       "command": "node",
-      "args": ["C:/Users/TUF Gaming A15/prd-forge/mcp-server.mjs", "--stdio"]
+      "args": ["<path-ke-rancang>/mcp-server.mjs", "--stdio"]
     }
   }
 }

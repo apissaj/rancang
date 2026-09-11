@@ -10,7 +10,7 @@ Build a Next.js 15 (App Router) web app called "PRD Forge" — an MVP combining 
 
 ## LLM backend (mandatory — reuse existing gateway, do NOT add new API keys)
 All AI calls go through an OpenAI-compatible endpoint:
-- Base URL: value of env var `LLM_BASE_URL` (e.g. `http://192.168.1.20:20128/v1`)
+- Base URL: value of env var `LLM_BASE_URL` (e.g. `http://localhost:20128/v1`)
 - API key: value of env var `LLM_API_KEY`
 - Available models (hardcode this list, env var `LLM_MODELS` as comma-separated override):
   `cx/gpt-5.5,cx/gpt-5.4,cx/gpt-5.3-codex,cx/gpt-5.2,cx/gpt-5.1,auto,cc/claude-sonnet-5`
@@ -43,7 +43,7 @@ All AI calls go through an OpenAI-compatible endpoint:
 
 ## Environment variables (.env.example must document all of these)
 ```
-LLM_BASE_URL=http://192.168.1.20:20128/v1
+LLM_BASE_URL=http://localhost:20128/v1
 LLM_API_KEY=your-key-here
 LLM_MODELS=cx/gpt-5.5,cx/gpt-5.4,cx/gpt-5.3-codex,cx/gpt-5.2,cx/gpt-5.1,auto,cc/claude-sonnet-5
 LLM_DEFAULT_MODEL=auto
