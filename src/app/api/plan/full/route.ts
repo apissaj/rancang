@@ -133,10 +133,33 @@ export async function POST(req: Request) {
             encoder.encode(`\n\n<!-- DOC:${doc} -->\n\n`)
           );
           const reader = stream.getReader();
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            controller.enqueue(value);
+          let chars = 0;
+          try {
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              chars += value.length;
+              controller.enqueue(value);
+            }
+          } catch (err) {
+            // One document failing must not abort the other three. But it must
+            // not vanish either: callers used to receive a 200 with an empty
+            // section and no way to tell it apart from a lazy model. Emit the
+            // reason inline, inside the section it belongs to.
+            const msg = err instanceof Error ? err.message : String(err);
+            controller.enqueue(
+              encoder.encode(
+                `\n> **[generate error — ${doc}]** ${msg}\n\n_Retry this document, or pick a different model._\n`
+              )
+            );
+            continue;
+          }
+          if (chars === 0) {
+            controller.enqueue(
+              encoder.encode(
+                `\n> **[empty document — ${doc}]** The model returned no content for this section.\n\n_Retry, or pick a different model._\n`
+              )
+            );
           }
         }
         controller.close();

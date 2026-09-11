@@ -111,13 +111,27 @@ export function toTextDeltaStream(upstream: ReadableStream<Uint8Array>): Readabl
             if (!trimmed.startsWith("data:")) continue;
             const payload = trimmed.slice(5).trim();
             if (payload === "[DONE]") continue;
+            let json: {
+              error?: { message?: string };
+              choices?: { delta?: { content?: string } }[];
+            };
             try {
-              const json = JSON.parse(payload);
-              const delta: string | undefined = json.choices?.[0]?.delta?.content;
-              if (delta) emit(controller, delta);
+              json = JSON.parse(payload);
             } catch {
-              // ignore malformed SSE chunks
+              // Not JSON — a keep-alive comment or a truncated chunk. Nothing to
+              // extract, but the stream is still healthy.
+              continue;
             }
+            // An upstream error can arrive as a normal SSE frame *after* a 200.
+            // Swallowing it here is what made a dead document indistinguishable
+            // from a doc the model chose not to write: the caller got 200, an
+            // empty section, and no explanation. Surface it instead.
+            if (json.error) {
+              const msg = json.error.message || JSON.stringify(json.error);
+              throw new Error(`upstream stream error: ${msg}`);
+            }
+            const delta: string | undefined = json.choices?.[0]?.delta?.content;
+            if (delta) emit(controller, delta);
           }
         }
         // Flush anything still buffered (e.g. response ended before we could confirm no think block)

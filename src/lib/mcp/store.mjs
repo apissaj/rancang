@@ -128,7 +128,94 @@ export function resolveBlueprint(idOrPrefix) {
 // We parse those checkbox lines so an agent can pull one task at a time and
 // tick it off as it goes, which is what makes the loop resumable.
 
-const TASK_RE = /^\s*[-*]\s*\[([ xX])\]\s*(T?\d+)?\s*(.*)$/;
+// Task bullets are not written to one spec. Across five runs of the same model
+// on the same prompt we saw five different shapes for the same task:
+//   - [ ] T001 Do the thing     checkbox + id   (the template's own shape)
+//   - [x] T002 Do the thing     checkbox, ticked
+//   - T1 Do the thing           bare id
+//   - [T1] Do the thing         id in brackets
+//   - **F1** Do the thing       id in bold       (**US1-1** for story-scoped ids)
+// Enumerating those spellings was a losing game — each fix just taught us the
+// next variant, and every miss reported "0 tasks" silently, which is the worst
+// failure mode: the blueprint looked fine and the agent loop sat idle. So
+// recognize a task bullet structurally instead of by spelling.
+//
+// A task bullet is a list marker, then a run of wrappers, then an id token.
+// The id is the discriminator: prose bullets never start with one. So peel
+// wrappers until we land on the id, then everything after it is the task text.
+
+const LIST_RE = /^(\s*)[-*]\s+(.*)$/;
+const CHECKBOX_RE = /^\[\s*([xX]?)\s*\]\s*/;
+const BRACKET_RE = /^\[([^\]]*)\]\s*/;
+const BOLD_RE = /^\*\*([^*]+)\*\*\s*/;
+const TICK_RE = /^`([^`]+)`\s*/;
+const ID_RE = /^((?:US|F|T|P|PH|S)?\d+(?:[.-]\d+)*)\b/;
+
+/** True when a token is a bare task id (T001, F1, US1-1, PH2) — not prose. */
+function isTaskId(token) {
+  if (!token) return false;
+  return /^(?:US|F|T|P|PH|S)?\d+(?:[.-]\d+)*$/i.test(token.trim());
+}
+
+/** Normalize a task bullet to { mark, id, rest } — or null when the line isn't a task. */
+function matchTask(line) {
+  const lm = LIST_RE.exec(line);
+  if (!lm) return null;
+
+  let s = lm[2].trim();
+  let mark = " ";
+
+  // Peel leading wrappers. A wrapper that *contains* the id promotes it to the
+  // front; anything else (a [P] priority flag, an [US1] story tag) is dropped.
+  for (let guard = 0; guard < 6; guard++) {
+    const cb = CHECKBOX_RE.exec(s);
+    if (cb) {
+      if (cb[1]) mark = "x";
+      s = s.slice(cb[0].length);
+      continue;
+    }
+    const br = BRACKET_RE.exec(s);
+    if (br) {
+      const inner = br[1].trim();
+      if (isTaskId(inner)) s = `${inner} ${s.slice(br[0].length)}`;
+      else s = s.slice(br[0].length);
+      continue;
+    }
+    const bd = BOLD_RE.exec(s);
+    if (bd) {
+      const inner = bd[1].trim();
+      if (isTaskId(inner)) s = `${inner} ${s.slice(bd[0].length)}`;
+      else s = s.slice(bd[0].length);
+      continue;
+    }
+    const bt = TICK_RE.exec(s);
+    if (bt) {
+      s = s.slice(bt[0].length);
+      continue;
+    }
+    break;
+  }
+
+  const idm = ID_RE.exec(s);
+  if (!idm) return null;
+
+  // Everything after the id is the task text — but the id may have been
+  // followed by more wrappers ([P], [US1], **, backticks) before the prose
+  // starts. Strip those, then the separator punctuation, then trim.
+  let rest = s.slice(idm[0].length);
+  for (let guard = 0; guard < 6; guard++) {
+    const next = rest
+      .replace(/^\s+/, "")
+      .replace(/^\[[^\]]*\]/, "")
+      .replace(/^\*\*[^*]*\*\*/, "")
+      .replace(/^`[^`]*`/, "");
+    if (next === rest) break;
+    rest = next;
+  }
+  rest = rest.replace(/^[\s.:)—\-\]*`\[\]]+/, "").trim();
+
+  return { mark, id: idm[1], rest };
+}
 
 export function parseTasks(markdown) {
   if (!markdown) return [];
@@ -138,9 +225,9 @@ export function parseTasks(markdown) {
   lines.forEach((line, index) => {
     const heading = line.match(/^#{2,3}\s+(.*)$/);
     if (heading) phase = heading[1].trim();
-    const m = line.match(TASK_RE);
+    const m = matchTask(line);
     if (!m) return;
-    const [, mark, id, rest] = m;
+    const { mark, id, rest } = m;
     tasks.push({
       line: index,
       id: id || `line${index + 1}`,
@@ -172,14 +259,17 @@ export function completeTask(idOrPrefix, taskId, done = true) {
   let hit = false;
 
   const updated = lines.map((line) => {
-    const m = line.match(TASK_RE);
+    const m = matchTask(line);
     if (!m || hit) return line;
-    const [, , id, rest] = m;
+    const { id, rest } = m;
     const lineId = (id || "").toUpperCase();
     // Match on the task id (T012) or on an id prefix when the file has none.
     if (lineId !== wanted && !rest.trim().toUpperCase().startsWith(wanted)) return line;
     hit = true;
-    return `${line.slice(0, m.index)}- [${done ? "x" : " "}] ${id ? id + " " : ""}${rest}`;
+    // Rewrite as the canonical checkbox shape, so ticking a bare-id task
+    // upgrades it in place instead of appending a second representation.
+    const indent = line.slice(0, line.search(/\S/));
+    return `${indent}- [${done ? "x" : " "}] ${id ? id + " " : ""}${rest}`;
   });
 
   if (!hit) throw new Error(`task not found in ${record.id}: ${taskId}`);
