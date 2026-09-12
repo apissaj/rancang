@@ -1,5 +1,5 @@
 import { streamChatCompletion, toTextDeltaStream } from "@/lib/llm";
-import { getDefaultModel } from "@/lib/models";
+import { getDefaultModel, getAvailableModels } from "@/lib/models";
 import { rateLimiter } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
@@ -113,8 +113,18 @@ export async function POST(req: Request) {
   if (!idea || !idea.trim()) {
     return new Response("idea is required", { status: 400 });
   }
+  if (idea.length > 10000) {
+    return new Response(`idea terlalu panjang (maks 10.000 karakter)`, { status: 400 });
+  }
+  if (answers && answers.length > 20) {
+    return new Response(`Maksimal 20 jawaban`, { status: 400 });
+  }
 
+  const models = getAvailableModels();
   const chosenModel = model || getDefaultModel();
+  if (!models.includes(chosenModel)) {
+    return new Response(`Model "${chosenModel}" is not available. Available models: ${models.join(", ")}`, { status: 400 });
+  }
   const userMessage = buildUserMessage(idea, answers);
   const docs = ["prd", "spec", "plan", "tasks"] as const;
 
@@ -176,7 +186,7 @@ export async function POST(req: Request) {
       headers: { "Content-Type": "text/plain; charset=utf-8" },
     });
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Kesalahan tidak diketahui";
-    return new Response(message, { status: 502 });
+    console.error("[plan/full] generation failed:", err);
+    return new Response("Gagal menghubungi model AI", { status: 502 });
   }
 }

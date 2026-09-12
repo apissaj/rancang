@@ -65,6 +65,7 @@ export default function PlanPage() {
 
   const [models, setModels] = useState<string[]>([]);
   const [model, setModel] = useState("");
+  const [modelError, setModelError] = useState(false);
   const [compareMode, setCompareMode] = useState(false);
   const [compareModels, setCompareModels] = useState<string[]>([]);
   const [compareColumns, setCompareColumns] = useState<CompareColumn[] | null>(null);
@@ -95,8 +96,9 @@ export default function PlanPage() {
       .then((data: { models: string[]; defaultModel: string }) => {
         setModels(data.models);
         setModel(data.defaultModel);
+        setModelError(false);
       })
-      .catch(() => {});
+      .catch(() => { setModelError(true); });
   }, []);
 
   // Re-read from localStorage whenever the storage scope switches (login/logout),
@@ -459,6 +461,18 @@ export default function PlanPage() {
   };
 
   const activePlan = activeId ? plans.find((p) => p.id === activeId) ?? null : null;
+
+  const handleDelete = (id: string) => {
+    planStore.remove(id);
+    setPlans(planStore.all());
+    if (activeId === id) {
+      setActiveId(null);
+      setIdea("");
+      setMarkdown("");
+      setDocs({});
+      setError(null);
+    }
+  };
   const versions = activePlan?.versions ?? [];
   const viewedVersion = viewingVersionId ? versions.find((v) => v.id === viewingVersionId) ?? null : null;
   const displayedMarkdown = viewedVersion ? viewedVersion.markdown : markdown;
@@ -663,7 +677,7 @@ export default function PlanPage() {
     <AuthGate>
     <div className="flex flex-1 flex-col overflow-hidden lg:flex-row">
       <div className="flex flex-col">
-        <PlanSidebar plans={plans} activeId={activeId} onSelect={loadPlan} />
+        <PlanSidebar plans={plans} activeId={activeId} onSelect={loadPlan} onDelete={handleDelete} />
         <SyncIndicator status={sync.status} active={sync.active} />
       </div>
 
@@ -711,6 +725,11 @@ export default function PlanPage() {
               </div>
             )}
           </div>
+          {modelError && (
+            <div className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive">
+              Gagal memuat daftar model. Coba refresh halaman atau periksa koneksi.
+            </div>
+          )}
           {compareMode && compareModels.length < 2 && (
             <p className="text-xs text-muted-foreground">Pilih 2-3 model untuk dibandingkan.</p>
           )}

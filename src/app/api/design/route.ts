@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { chatCompletion } from "@/lib/llm";
-import { getDefaultModel } from "@/lib/models";
+import { getDefaultModel, getAvailableModels } from "@/lib/models";
 import type { Screen } from "@/lib/storage";
 import { rateLimiter } from "@/lib/rate-limit";
 
@@ -95,23 +95,36 @@ export async function POST(req: Request) {
   const blocked = limiter.check(req);
   if (blocked) return blocked;
 
-  const { idea, planMarkdown, vibe, platform, pwa } = (await req.json()) as {
+  const { idea, planMarkdown, vibe, platform, pwa, model } = (await req.json()) as {
     idea: string;
     planMarkdown?: string;
     vibe?: string;
     platform: "mobile" | "web" | "both";
     pwa: boolean;
+    model?: string;
   };
 
   if (!idea || !idea.trim()) {
     return NextResponse.json({ error: "idea is required" }, { status: 400 });
   }
+  if (idea.length > 10000) {
+    return NextResponse.json({ error: "idea terlalu panjang (maks 10.000 karakter)" }, { status: 400 });
+  }
+  if (planMarkdown && planMarkdown.length > 50000) {
+    return NextResponse.json({ error: "planMarkdown terlalu panjang (maks 50.000 karakter)" }, { status: 400 });
+  }
   if (platform !== "mobile" && platform !== "web" && platform !== "both") {
     return NextResponse.json({ error: "platform must be mobile, web, or both" }, { status: 400 });
   }
 
+  const models = getAvailableModels();
+  const chosenModel = model || getDefaultModel();
+  if (!models.includes(chosenModel)) {
+    return NextResponse.json({ error: `Model "${chosenModel}" is not available. Available models: ${models.join(", ")}` }, { status: 400 });
+  }
+
   try {
-    const raw = await chatCompletion(getDefaultModel(), [
+    const raw = await chatCompletion(chosenModel, [
       { role: "system", content: SYSTEM_PROMPT },
       { role: "user", content: buildUserMessage(idea, planMarkdown, vibe, platform, !!pwa) },
     ]);

@@ -50,19 +50,31 @@ export function PlanSidebar({
               title={p.title}
             >
               <span className="flex items-center gap-1.5 truncate text-[13px] font-medium text-foreground">
-                <FileText className="h-3 w-3 shrink-0 text-muted-foreground" />
-                {p.title}
-              </span>
-              <span className="truncate pl-[18px] text-[11px] text-muted-foreground">
-                {p.markdown ? (
-                  <>
-                    {timeAgo(p.createdAt)}
-                    {p.versions.length > 1 && ` · v${p.versions.length}`}
-                  </>
-                ) : (
-                  <span className="italic text-muted-foreground/60">draft — belum selesai</span>
-                )}
-              </span>
+                              <FileText className="h-3 w-3 shrink-0 text-muted-foreground" />
+                              {p.title}
+                            </span>
+                            <span className="truncate pl-[18px] text-[11px] text-muted-foreground">
+                              {p.markdown ? (
+                                <>
+                                  {timeAgo(p.createdAt)}
+                                  {p.versions.length > 1 && ` · v${p.versions.length}`}
+                                </>
+                              ) : (
+                                <span className="italic text-muted-foreground/60">draft — belum selesai</span>
+                              )}
+                            </span>
+                            {onDelete && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (window.confirm(`Hapus PRD "${p.title}"?`)) onDelete(p.id);
+                                }}
+                                className="absolute right-2 top-2 flex size-7 items-center justify-center rounded-md opacity-0 transition-opacity hover:bg-destructive/10 group-focus-within:opacity-100 group-hover:opacity-100"
+                                aria-label={`Hapus ${p.title}`}
+                              >
+                                <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                              </button>
+                            )}
             </button>
           ))}
           {plans.length === 0 && (

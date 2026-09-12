@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { chatCompletion } from "@/lib/llm";
-import { getDefaultModel } from "@/lib/models";
+import { getDefaultModel, getAvailableModels } from "@/lib/models";
 import type { StructureResponse } from "@/lib/clarify-types";
 import { rateLimiter } from "@/lib/rate-limit";
 
@@ -50,7 +50,19 @@ export async function POST(req: Request) {
       model?: string;
     };
     if (!idea || !idea.trim()) {
-      return new Response("idea is required", { status: 400 });
+        return new Response("idea is required", { status: 400 });
+      }
+      if (idea.length > 10000) {
+        return new Response(`idea terlalu panjang (maks 10.000 karakter)`, { status: 400 });
+      }
+      if (answers && answers.length > 20) {
+        return new Response(`Maksimal 20 jawaban`, { status: 400 });
+      }
+
+    const models = getAvailableModels();
+    const chosenModel = model || getDefaultModel();
+    if (!models.includes(chosenModel)) {
+      return new Response(`Model "${chosenModel}" is not available. Available models: ${models.join(", ")}`, { status: 400 });
     }
 
     const answerText = answers?.length
@@ -59,7 +71,7 @@ export async function POST(req: Request) {
       : "";
 
     const completion = await chatCompletion(
-      model || getDefaultModel(),
+      chosenModel,
       [
         { role: "system", content: SYSTEM_PROMPT },
         { role: "user", content: `Ide: ${idea}${answerText}` },
@@ -72,7 +84,7 @@ export async function POST(req: Request) {
     }
     return NextResponse.json(parsed);
   } catch (err) {
-    const message = err instanceof Error ? err.message : "failed to build structure";
-    return new Response(message, { status: 502 });
+    console.error("[plan/structure] failed:", err);
+    return new Response("Gagal menghubungi model AI", { status: 502 });
   }
 }

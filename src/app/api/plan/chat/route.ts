@@ -1,5 +1,5 @@
 import { streamChatCompletion, toTextDeltaStream } from "@/lib/llm";
-import { getDefaultModel } from "@/lib/models";
+import { getDefaultModel, getAvailableModels } from "@/lib/models";
 import { buildBlueprintContext, type BlueprintDocs } from "@/lib/blueprint-context";
 import { rateLimiter } from "@/lib/rate-limit";
 
@@ -46,6 +46,16 @@ export async function POST(req: Request) {
   if (!message?.trim()) {
     return new Response("message is required", { status: 400 });
   }
+  if (message.length > 50000) {
+    return new Response(`message terlalu panjang (maks 50.000 karakter)`, { status: 400 });
+  }
+  // docs content capped
+  const docKeys = Object.keys(docs);
+  for (const k of docKeys) {
+    if (typeof docs[k] === "string" && docs[k].length > 50000) {
+      return new Response(`docs.${k} terlalu panjang (maks 50.000 karakter)`, { status: 400 });
+    }
+  }
 
   const blueprint = buildBlueprintContext(docs);
   const trimmed = (history ?? []).slice(-MAX_HISTORY_MESSAGES);
@@ -57,6 +67,12 @@ export async function POST(req: Request) {
     { role: "user" as const, content: message },
   ];
 
+  const models = getAvailableModels();
+  const chosenModel = model || getDefaultModel();
+  if (!models.includes(chosenModel)) {
+    return new Response(`Model "${chosenModel}" is not available. Available models: ${models.join(", ")}`, { status: 400 });
+  }
+
   const size = messages.reduce((n, m) => n + m.content.length, 0);
   if (size > MAX_CONTEXT_CHARS) {
     return new Response(
@@ -66,12 +82,12 @@ export async function POST(req: Request) {
   }
 
   try {
-    const upstream = await streamChatCompletion(model || getDefaultModel(), messages);
+    const upstream = await streamChatCompletion(chosenModel, messages);
     return new Response(toTextDeltaStream(upstream.body!), {
       headers: { "Content-Type": "text/plain; charset=utf-8" },
     });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : "Kesalahan tidak diketahui";
-    return new Response(msg, { status: 502 });
+    console.error("[plan/chat] completion failed:", err);
+    return new Response("Gagal menghubungi model AI", { status: 502 });
   }
 }

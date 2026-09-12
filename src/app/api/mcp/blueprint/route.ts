@@ -5,6 +5,9 @@ import { rateLimiter } from "@/lib/rate-limit";
 export const dynamic = "force-dynamic";
 const limiter = rateLimiter(60, 60_000);
 
+const MAX_DOC_CHARS = 200_000;
+const MAX_TOTAL_CHARS = 800_000;
+
 /**
  * Blueprint bridge for the MCP layer.
  *
@@ -31,7 +34,8 @@ export async function GET(req: NextRequest) {
     const items = listBlueprints();
     return NextResponse.json({ count: items.length, blueprints: items });
   } catch (err) {
-    return NextResponse.json({ error: err instanceof Error ? err.message : "unknown error" }, { status: 500 });
+    console.error("[mcp/blueprint] list/read failed:", err);
+    return NextResponse.json({ error: "Gagal memuat blueprint" }, { status: 500 });
   }
 }
 
@@ -62,6 +66,25 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  // Cap doc sizes — docs are plain strings written straight to disk.
+  let totalChars = 0;
+  for (const name of present) {
+    const len = docs![name].length;
+    if (len > MAX_DOC_CHARS) {
+      return NextResponse.json(
+        { error: `Dokumen '${name}' melebihi batas ${MAX_DOC_CHARS} karakter` },
+        { status: 413 }
+      );
+    }
+    totalChars += len;
+  }
+  if (totalChars > MAX_TOTAL_CHARS) {
+    return NextResponse.json(
+      { error: `Total blueprint melebihi batas ${MAX_TOTAL_CHARS} karakter` },
+      { status: 413 }
+    );
+  }
+
   try {
     const record = saveBlueprint({ id, title, idea, model, docs, source: "web" });
     return NextResponse.json({
@@ -72,6 +95,7 @@ export async function POST(req: NextRequest) {
       saved_to: "~/.rancang/blueprints",
     });
   } catch (err) {
-    return NextResponse.json({ error: err instanceof Error ? err.message : "unknown error" }, { status: 500 });
+    console.error("[mcp/blueprint] save failed:", err);
+    return NextResponse.json({ error: "Gagal menyimpan blueprint" }, { status: 500 });
   }
 }

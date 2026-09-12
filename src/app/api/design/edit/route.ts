@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { chatCompletion } from "@/lib/llm";
-import { getDefaultModel } from "@/lib/models";
+import { getDefaultModel, getAvailableModels } from "@/lib/models";
 import type { Screen } from "@/lib/storage";
 import { rateLimiter } from "@/lib/rate-limit";
 
@@ -51,21 +51,37 @@ export async function POST(req: Request) {
   const blocked = limiter.check(req);
   if (blocked) return blocked;
 
-  const { designMd, screens, instruction } = (await req.json()) as {
+  const { designMd, screens, instruction, model } = (await req.json()) as {
     designMd: string;
     screens: Screen[];
     instruction: string;
+    model?: string;
   };
 
   if (!designMd || !designMd.trim()) {
     return NextResponse.json({ error: "designMd is required" }, { status: 400 });
   }
+  if (designMd.length > 50000) {
+    return NextResponse.json({ error: "designMd terlalu panjang (maks 50.000 karakter)" }, { status: 400 });
+  }
   if (!instruction || !instruction.trim()) {
     return NextResponse.json({ error: "instruction is required" }, { status: 400 });
   }
+  if (instruction.length > 5000) {
+    return NextResponse.json({ error: "instruction terlalu panjang (maks 5.000 karakter)" }, { status: 400 });
+  }
+  if (screens && screens.length > 20) {
+    return NextResponse.json({ error: "Maksimal 20 screens" }, { status: 400 });
+  }
+
+  const models = getAvailableModels();
+  const chosenModel = model || getDefaultModel();
+  if (!models.includes(chosenModel)) {
+    return NextResponse.json({ error: `Model "${chosenModel}" is not available. Available models: ${models.join(", ")}` }, { status: 400 });
+  }
 
   try {
-    const raw = await chatCompletion(getDefaultModel(), [
+    const raw = await chatCompletion(chosenModel, [
       { role: "system", content: SYSTEM_PROMPT },
       { role: "user", content: buildUserMessage(designMd, screens ?? [], instruction) },
     ]);
@@ -75,7 +91,7 @@ export async function POST(req: Request) {
     }
     return NextResponse.json(parsed);
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Kesalahan tidak diketahui";
-    return NextResponse.json({ error: message }, { status: 502 });
+    console.error("[design/edit] failed:", err);
+    return NextResponse.json({ error: "Gagal menghubungi model AI" }, { status: 502 });
   }
 }

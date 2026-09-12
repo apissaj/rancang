@@ -1,5 +1,5 @@
 import { streamChatCompletion, toTextDeltaStream } from "@/lib/llm";
-import { getDefaultModel } from "@/lib/models";
+import { getDefaultModel, getAvailableModels } from "@/lib/models";
 import { buildBlueprintContext, docLabel, type BlueprintDocs } from "@/lib/blueprint-context";
 import { rateLimiter } from "@/lib/rate-limit";
 
@@ -45,6 +45,23 @@ export async function POST(req: Request) {
     });
   }
   const target: AllowedTarget | undefined = rawTarget as AllowedTarget | undefined;
+  if (body.markdown && body.markdown.length > 50000) {
+    return new Response(`markdown terlalu panjang (maks 50.000 karakter)`, { status: 400 });
+  }
+  if (body.instruction && body.instruction.length > 5000) {
+    return new Response(`instruction terlalu panjang (maks 5.000 karakter)`, { status: 400 });
+  }
+
+  // docs: cap each doc value
+  if (body.docs) {
+    const keys = Object.keys(body.docs);
+    for (const k of keys) {
+      if (typeof body.docs[k] === "string" && body.docs[k].length > 50000) {
+        return new Response(`docs.${k} terlalu panjang (maks 50.000 karakter)`, { status: 400 });
+      }
+    }
+  }
+
   let currentMarkdown: string;
   let context: string;
 
@@ -64,6 +81,12 @@ export async function POST(req: Request) {
     return new Response("markdown or docs with a matching target is required", { status: 400 });
   }
 
+  const models = getAvailableModels();
+  const chosenModel = body.model || getDefaultModel();
+  if (!models.includes(chosenModel)) {
+    return new Response(`Model "${chosenModel}" is not available. Available models: ${models.join(", ")}`, { status: 400 });
+  }
+
   const userMessage =
     (context
       ? `The other documents (read-only context — do NOT rewrite them):\n---\n${context}\n---\n\n`
@@ -73,7 +96,7 @@ export async function POST(req: Request) {
       : `Current PRD:\n---\n${currentMarkdown}\n---\n\nInstruction:\n${instruction}`);
 
   try {
-    const upstream = await streamChatCompletion(body.model || getDefaultModel(), [
+    const upstream = await streamChatCompletion(chosenModel, [
       { role: "system", content: systemForTarget(target) },
       { role: "user", content: userMessage },
     ]);
@@ -81,7 +104,7 @@ export async function POST(req: Request) {
       headers: { "Content-Type": "text/plain; charset=utf-8" },
     });
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Kesalahan tidak diketahui";
-    return new Response(message, { status: 502 });
+    console.error("[plan/edit] stream failed:", err);
+    return new Response("Gagal menghubungi model AI", { status: 502 });
   }
 }

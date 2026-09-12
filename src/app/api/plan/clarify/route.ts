@@ -71,6 +71,9 @@ export async function POST(req: Request) {
   if (!idea || !idea.trim()) {
     return NextResponse.json({ error: "idea is required" }, { status: 400 });
   }
+  if (idea.length > 10000) {
+    return NextResponse.json({ error: "idea terlalu panjang (maks 10.000 karakter)" }, { status: 400 });
+  }
 
   try {
     const raw = await chatCompletion(getDefaultModel(), [
@@ -83,7 +86,7 @@ export async function POST(req: Request) {
     }
     return NextResponse.json(parsed);
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Kesalahan tidak diketahui";
-    return NextResponse.json({ error: message }, { status: 502 });
+    console.error("[plan/clarify] failed:", err);
+    return NextResponse.json({ error: "Gagal menghubungi model AI" }, { status: 502 });
   }
 }

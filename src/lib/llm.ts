@@ -11,21 +11,30 @@ export async function streamChatCompletion(model: string, messages: ChatMessage[
   const apiKey = process.env.LLM_API_KEY;
   if (!baseUrl) throw new Error("LLM_BASE_URL is not configured");
 
-  const res = await fetch(`${baseUrl.replace(/\/$/, "")}/chat/completions`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
-    },
-    body: JSON.stringify({ model, messages, stream: true }),
-  });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 120_000);
 
-  if (!res.ok || !res.body) {
-    const text = await res.text().catch(() => "");
-    throw new Error(`LLM gateway error (${res.status}): ${text || res.statusText}`);
+  try {
+    const res = await fetch(`${baseUrl.replace(/\/$/, "")}/chat/completions`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
+      },
+      signal: controller.signal,
+      body: JSON.stringify({ model, messages, stream: true }),
+    });
+
+    if (!res.ok || !res.body) {
+      const text = await res.text().catch(() => "");
+      console.error(`[llm] stream error (${res.status}):`, text || res.statusText);
+      throw new Error(`Gagal memproses permintaan ke model (${res.status})`);
+    }
+
+    return res;
+  } finally {
+    clearTimeout(timeout);
   }
-
-  return res;
 }
 
 /**
@@ -37,24 +46,33 @@ export async function chatCompletion(model: string, messages: ChatMessage[]): Pr
   const apiKey = process.env.LLM_API_KEY;
   if (!baseUrl) throw new Error("LLM_BASE_URL is not configured");
 
-  const res = await fetch(`${baseUrl.replace(/\/$/, "")}/chat/completions`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
-    },
-    body: JSON.stringify({ model, messages, stream: false }),
-  });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 120_000);
 
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(`LLM gateway error (${res.status}): ${text || res.statusText}`);
+  try {
+    const res = await fetch(`${baseUrl.replace(/\/$/, "")}/chat/completions`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
+      },
+      signal: controller.signal,
+      body: JSON.stringify({ model, messages, stream: false }),
+    });
+
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      console.error(`[llm] completion error (${res.status}):`, text || res.statusText);
+      throw new Error(`Gagal memproses permintaan ke model (${res.status})`);
+    }
+
+    const json = await res.json();
+    const content: string | undefined = json.choices?.[0]?.message?.content;
+    if (!content) throw new Error("LLM gateway returned no content");
+    return content;
+  } finally {
+    clearTimeout(timeout);
   }
-
-  const json = await res.json();
-  const content: string | undefined = json.choices?.[0]?.message?.content;
-  if (!content) throw new Error("LLM gateway returned no content");
-  return content;
 }
 
 /**

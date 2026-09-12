@@ -77,6 +77,46 @@ async function runHttp() {
   const port = Number(process.env.RANCANG_MCP_PORT || 3110);
   const sessions = new Map(); // sessionId -> transport
 
+  // Stale-session reaper: if a client initializes a session and never closes it
+  // (crash, tab close, no DELETE), the transport would linger forever and the
+  // sessions map would grow unbounded. Sweep sessions idle > 30 minutes.
+  const SESSION_TTL_MS = 30 * 60 * 1000;
+  const sessionLastSeen = new Map(); // sessionId -> timestamp
+  const sweepSessions = () => {
+    const now = Date.now();
+    for (const [sid, seen] of sessionLastSeen) {
+      if (now - seen > SESSION_TTL_MS) {
+        const transport = sessions.get(sid);
+        if (transport && typeof transport.close === "function") {
+          try { transport.close(); } catch { /* already closed */ }
+        }
+        sessions.delete(sid);
+        sessionLastSeen.delete(sid);
+      }
+    }
+  };
+  setInterval(sweepSessions, 5 * 60 * 1000).unref?.();
+
+  // Basic per-IP rate limit for the local MCP endpoint. Not for abuse on the
+  // loopback (low risk), but cheap insurance if the port ever gets exposed.
+  const MCP_RATE_MAX = 120; // requests per window
+  const MCP_RATE_WINDOW_MS = 60_000;
+  const rateBuckets = new Map(); // ip -> { count, resetAt }
+  function rateLimited(ip) {
+    const now = Date.now();
+    const b = rateBuckets.get(ip);
+    if (!b || now >= b.resetAt) {
+      rateBuckets.set(ip, { count: 1, resetAt: now + MCP_RATE_WINDOW_MS });
+      return false;
+    }
+    b.count++;
+    return b.count > MCP_RATE_MAX;
+  }
+  setInterval(() => {
+    const now = Date.now();
+    for (const [k, v] of rateBuckets) if (v.resetAt <= now) rateBuckets.delete(k);
+  }, 60_000).unref?.();
+
   // Local web app (Rancang :3100) is the only allowed browser origin. Anything
   // else (a random website hitting http://127.0.0.1:3110 via the victim's
   // browser = DNS rebinding / CSRF) gets no CORS and is rejected pre-handshake.
@@ -113,6 +153,13 @@ async function runHttp() {
       return;
     }
 
+    const clientIp = req.socket.remoteAddress || "unknown";
+    if (rateLimited(clientIp)) {
+      res.writeHead(429, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ jsonrpc: "2.0", error: { code: -32029, message: "Rate limit exceeded" }, id: null }));
+      return;
+    }
+
     let body;
     try {
       body = await readBody(req);
@@ -145,13 +192,21 @@ async function runHttp() {
         const server = await createServer();
         transport = new StreamableHTTPServerTransport({
           sessionIdGenerator: randomUUID,
-          onsessioninitialized: (sid) => sessions.set(sid, transport),
+          onsessioninitialized: (sid) => {
+            sessions.set(sid, transport);
+            sessionLastSeen.set(sid, Date.now());
+          },
         });
         transport.onclose = () => {
           const sid = transport.sessionId;
-          if (sid) sessions.delete(sid);
+          if (sid) {
+            sessions.delete(sid);
+            sessionLastSeen.delete(sid);
+          }
         };
         await server.connect(transport);
+      } else {
+        sessionLastSeen.set(sessionId, Date.now());
       }
 
       await transport.handleRequest(req, res, body);
