@@ -43,9 +43,7 @@ Tanpa akun. Tanpa database. Tanpa registrasi. Semua data tetap di browser kamu.
 | Fitur | Deskripsi |
 |---|---|
 | **🛠️ Generator PRD** | Satu kalimat ide → PRD lengkap dengan tujuan, user story, kebutuhan, task breakdown bernomor. Streaming langsung ke editor. |
-| **💬 Chat Multi-Model** | Ngobrol dengan model apa pun dari gateway kamu. Aktifkan mode **banding** untuk menjalankan prompt yang sama di 2–3 model sekaligus dan lihat responsnya streaming berdampingan. |
 | **🎨 Generator Desain** | Ide → spesifikasi token `DESIGN.md` (format Google DESIGN.md) + prototipe wireframe (screenshot visual) yang bisa diklik. |
-| **📦 Unduh Semua (.zip)** | Ekspor blueprint sebagai satu file ZIP berisi `prd.md`, `spec.md`, `plan.md`, `tasks.md` — siap dilempar ke coding agent. |
 | **🔌 MCP Server** | Blueprint bisa ditarik langsung oleh Claude Code / Cursor / Codex / Hermes lewat MCP — agent ambil execution prompt sendiri, kerjakan task satu per satu, progres tersimpan dan bisa putus-nyambung. |
 | **🔐 Tanpa Akun** | Data tersimpan di `localStorage`. Tidak ada server-side database, tidak ada registrasi. Buka, pakai, tutup — selesai. |
 | **🌐 Gateway Sendiri** | Semua LLM call lewat Route Handler server-side ke OpenAI-compatible gateway milikmu. API key tidak pernah ke browser. |
@@ -62,11 +60,7 @@ Tanpa akun. Tanpa database. Tanpa registrasi. Semua data tetap di browser kamu.
 2. **Klarifikasi** (opsional) — Rancang mengajukan 5 pertanyaan singkat buat memperkaya konteks. Bisa dilewati.
 3. **Streaming PRD** — PRD, spesifikasi, rencana teknis, dan task breakdown streaming langsung ke editor Markdown.
 4. **Multi-model** — aktifkan mode banding, jalankan di 2–3 model sekaligus, lihat hasilnya berdampingan.
-5. **Unduh** — satu file `.md` per dokumen, atau satu ZIP semua dokumen.
-
-### Halaman `/chat` — Chat Multi-Model
-
-Chat biasa dengan model dari gateway kamu. Aktifkan **mode banding** untuk membandingkan respons beberapa model secara real-time dalam satu layar terpisah.
+5. **Salin Prompt MCP** — blueprint langsung tersedia di MCP server tanpa ekspor manual.
 
 ### Halaman `/design` — Generator Desain
 
@@ -100,14 +94,11 @@ src/
 │   ├── page.tsx              # Landing page (hero, fitur, harga, testimoni)
 │   ├── layout.tsx            # Root layout (theme provider, nav, footer)
 │   ├── globals.css           # CSS variables tema dark/light
-│   ├── chat/
-│   │   └── page.tsx          # Chat multi-model
 │   ├── plan/
 │   │   └── page.tsx          # Generator PRD (full pipeline)
 │   ├── design/
 │   │   └── page.tsx          # Generator desain
 │   └── api/
-│       ├── chat/route.ts     # POST — streaming chat completion
 │       ├── models/route.ts   # GET — daftar model & default dari env
 │       ├── plan/
 │       │   ├── route.ts      # POST — generate PRD (streaming)
@@ -124,7 +115,6 @@ src/
 ├── components/
 │   ├── ui/                   # shadcn/ui components (button, dialog, switch, dll)
 │   ├── effects/              # Landing page sections (hero, testimonials, pricing, faq, dll)
-│   ├── chat/                 # Chat UI components
 │   ├── plan/                 # Plan UI (clarify questions, editor, downloads)
 │   ├── design/               # Design UI (wireframe canvas, export)
 │   └── layout/               # Navbar, footer, auth gate
@@ -148,11 +138,6 @@ src/
 
 ```
 Browser (localStorage)          Server (Next.js)              Gateway (LLM)
-      │                              │                           │
-      │  POST /api/chat              │                           │
-      │  { model, messages } ──────► │  fetch(baseURL/chat) ────►│
-      │                              │  ◄── stream (SSE) ───────│
-      │  ◄── text delta stream ─────│                           │
       │                              │                           │
       │  POST /api/plan              │                           │
       │  { idea, model } ──────────► │  fetch(baseURL/chat) ────►│
@@ -323,7 +308,7 @@ PORT=3100 HOSTNAME=0.0.0.0 node .next/standalone/server.js
 | `LLM_BASE_URL` | ✅ | — | Base URL OpenAI-compatible gateway (contoh: `http://localhost:20128/v1`) |
 | `LLM_API_KEY` | ✅ | — | API key untuk gateway. Tidak diekspos ke browser. |
 | `LLM_MODELS` | ❌ | — | Daftar model dipisah koma. Muncul di model picker. |
-| `LLM_DEFAULT_MODEL` | ❌ | — | Model default untuk chat & generator PRD. |
+| `LLM_DEFAULT_MODEL` | ❌ | — | Model default untuk generator PRD. |
 | `NODE_ENV` | ❌ | `production` | Environment mode. |
 | `RANCANG_HOME` | ❌ | `~/.rancang` | Folder penyimpanan blueprint yang dibaca MCP server. |
 | `RANCANG_MCP_PORT` | ❌ | `3110` | Port transport HTTP MCP. |
@@ -347,19 +332,6 @@ Jika `LLM_DEFAULT_MODEL` tidak di-set, fallback ke model pertama dari `LLM_MODEL
 ## API Routes
 
 Semua route menggunakan `dynamic = "force-dynamic"` — tidak ada caching, semua request langsung ke gateway.
-
-### `POST /api/chat`
-**Streaming chat completion**
-
-```json
-{
-  "model": "cx/gpt-5.6-sol",
-  "messages": [
-    { "role": "user", "content": "Buatkan arsitektur untuk todo app" }
-  ]
-}
-```
-**Response**: `text/plain; charset=utf-8` — plain text delta stream (bukan SSE; token di-stream langsung sebagai teks mentah, tanpa parser sisi client).
 
 ### `POST /api/plan`
 **Generate PRD streaming**
