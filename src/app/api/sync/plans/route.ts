@@ -3,6 +3,7 @@ import { requireUid } from "@/lib/sync-auth";
 import { getAdminDb } from "@/lib/firebase-admin";
 import { rateLimiter } from "@/lib/rate-limit";
 import type { PlanRecord } from "@/lib/storage";
+import type { QueryDocumentSnapshot } from "firebase-admin/firestore";
 
 const limiter = rateLimiter(30, 60_000);
 
@@ -10,7 +11,7 @@ export async function GET(req: NextRequest) {
   const check = await requireUid(req);
   if ("error" in check) return check.error;
   const snap = await getAdminDb().collection("users").doc(check.uid).collection("plans").get();
-  const plans = snap.docs.map((d) => d.data() as PlanRecord);
+  const plans = snap.docs.map((d: QueryDocumentSnapshot) => d.data() as PlanRecord);
   return NextResponse.json({ plans });
 }
 

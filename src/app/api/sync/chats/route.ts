@@ -3,6 +3,7 @@ import { requireUid } from "@/lib/sync-auth";
 import { getAdminDb } from "@/lib/firebase-admin";
 import { rateLimiter } from "@/lib/rate-limit";
 import type { Conversation } from "@/lib/storage";
+import type { QueryDocumentSnapshot } from "firebase-admin/firestore";
 
 const limiter = rateLimiter(30, 60_000);
 
@@ -10,7 +11,7 @@ export async function GET(req: NextRequest) {
   const check = await requireUid(req);
   if ("error" in check) return check.error;
   const snap = await getAdminDb().collection("users").doc(check.uid).collection("chats").get();
-  const chats = snap.docs.map((d) => d.data() as Conversation);
+  const chats = snap.docs.map((d: QueryDocumentSnapshot) => d.data() as Conversation);
   return NextResponse.json({ chats });
 }
 
