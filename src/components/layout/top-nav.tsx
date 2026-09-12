@@ -12,10 +12,9 @@ import { Button } from "@/components/ui/button";
 const links = [
   { href: "/plan", label: "Rencana" },
   { href: "/design", label: "Desain" },
-  { href: "/dashboard", label: "Dashboard" },
 ];
 
-const APP_PATHS = ["/plan", "/design", "/dashboard"];
+const APP_PATHS = ["/plan", "/design"];
 
 // Desktop navigation links (shared between variants)
 function DesktopLinks({ active }: { active: (href: string) => boolean }) {
