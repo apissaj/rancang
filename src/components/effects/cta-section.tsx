@@ -30,13 +30,6 @@ export default function CTASection() {
                 Mulai rancang
                 <ArrowRight className="ml-2 size-4" />
               </Button>
-              <Button
-                variant="outline"
-                render={<Link href="/chat" />}
-                className="h-12 px-8 text-base"
-              >
-                Buka chat
-              </Button>
             </div>
           </div>
         </div>

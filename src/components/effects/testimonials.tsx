@@ -27,12 +27,6 @@ const testimonials = [
     text: "Task-nya bernomor dan terstruktur, cocok banget buat onboarding developer baru. Tim saya nggak perlu nanya 'mulai dari mana' lagi — tinggal jalanin task satu per satu.",
   },
   {
-    name: "Fajar Nugroho",
-    role: "Full-stack Developer",
-    rating: 4,
-    text: "Mode banding di chat multi-model itu underrated. Jalanin prompt yang sama di 2-3 model, lihat mana yang paling masuk akal buat arsitektur project saya.",
-  },
-  {
     name: "Laras Widya",
     role: "Startup Founder",
     rating: 5,

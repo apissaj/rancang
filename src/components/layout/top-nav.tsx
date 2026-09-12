@@ -10,13 +10,12 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import { Button } from "@/components/ui/button";
 
 const links = [
-  { href: "/chat", label: "Chat" },
   { href: "/plan", label: "Rencana" },
   { href: "/design", label: "Desain" },
   { href: "/dashboard", label: "Dashboard" },
 ];
 
-const APP_PATHS = ["/chat", "/plan", "/design", "/dashboard"];
+const APP_PATHS = ["/plan", "/design", "/dashboard"];
 
 // Desktop navigation links (shared between variants)
 function DesktopLinks({ active }: { active: (href: string) => boolean }) {

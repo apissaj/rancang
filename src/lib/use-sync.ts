@@ -3,9 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/components/auth-provider";
 import { conversationStore, planStore, designStore, type Conversation, type PlanRecord, type DesignRecord } from "@/lib/storage";
-
 export type SyncStatus = "idle" | "syncing" | "synced";
-
 async function authedFetch(user: NonNullable<ReturnType<typeof useAuth>["user"]>, url: string, init?: RequestInit) {
   const token = await user.getIdToken();
   return fetch(url, {
@@ -15,7 +13,8 @@ async function authedFetch(user: NonNullable<ReturnType<typeof useAuth>["user"]>
 }
 
 /**
- * Syncs localStorage conversations/plans with Firestore when a user is logged in.
+ * Syncs localStorage plans/designs with Firestore when a user is logged in.
+ * Legacy chat sync is kept only for one-time migration (old Firestore data).
  * Anonymous users: no-op, storage.ts behaves exactly as before.
  */
 export function useSync() {
@@ -48,18 +47,10 @@ export function useSync() {
         }
 
         // Merge Firestore into local view: Firestore wins on conflict by createdAt.
-        const [chatsRes, plansRes, designsRes] = await Promise.all([
-          authedFetch(user, "/api/sync/chats"),
+        const [plansRes, designsRes] = await Promise.all([
           authedFetch(user, "/api/sync/plans"),
           authedFetch(user, "/api/sync/designs"),
         ]);
-        if (chatsRes.ok) {
-          const { chats } = (await chatsRes.json()) as { chats: Conversation[] };
-          for (const remote of chats) {
-            const local = conversationStore.all().find((c) => c.id === remote.id);
-            if (!local || remote.createdAt >= local.createdAt) conversationStore.save(remote);
-          }
-        }
         if (plansRes.ok) {
           const { plans } = (await plansRes.json()) as { plans: PlanRecord[] };
           for (const remote of plans) {
@@ -86,22 +77,6 @@ export function useSync() {
       cancelled = true;
     };
   }, [user]);
-
-  const syncConversation = async (conversation: Conversation) => {
-    if (!user) return;
-    setStatus("syncing");
-    try {
-      const res = await authedFetch(user, "/api/sync/chats", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(conversation),
-      });
-      setStatus(res.ok ? "synced" : "idle");
-    } catch (err) {
-      console.warn("[sync] chat sync failed", err);
-      setStatus("idle");
-    }
-  };
 
   const syncPlan = async (plan: PlanRecord) => {
     if (!user) return;
@@ -135,15 +110,6 @@ export function useSync() {
     }
   };
 
-  const deleteConversation = async (id: string) => {
-    if (!user) return;
-    try {
-      await authedFetch(user, `/api/sync/chats/${id}`, { method: "DELETE" });
-    } catch (err) {
-      console.warn("[sync] chat delete failed", err);
-    }
-  };
-
   const deleteDesignRemote = async (id: string) => {
     if (!user) return;
     try {
@@ -153,5 +119,5 @@ export function useSync() {
     }
   };
 
-  return { status, syncConversation, syncPlan, syncDesign, deleteConversation, deleteDesignRemote, active: !!user };
+  return { status, syncPlan, syncDesign, deleteDesignRemote, active: !!user };
 }

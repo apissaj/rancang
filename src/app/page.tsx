@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { ArrowRight, MessagesSquare, FileText, FileCode2, FileCog, Palette, Cpu } from "lucide-react";
+import { ArrowRight, FileText, FileCode2, FileCog, Palette, Cpu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Reveal from "@/components/effects/reveal";
 import LandingBackground from "@/components/effects/landing-background";
@@ -18,19 +18,11 @@ import Footer from "@/components/layout/footer";
 
 const tools = [
   {
-    href: "/chat",
-    icon: MessagesSquare,
-    title: "Chat Multi-Model",
-    description:
-      "Ngobrol dengan model apa pun yang terkonfigurasi, atau aktifkan mode banding untuk menjalankan prompt yang sama di 2–3 model sekaligus dan lihat responsnya streaming berdampingan.",
-    cta: "Buka chat",
-  },
-  {
     href: "/plan",
     icon: FileText,
-    title: "Generator PRD",
+    title: "Generator PRD & Blueprint",
     description:
-      "Jelaskan ide aplikasi atau fitur, dapatkan PRD lengkap: tujuan, user story, kebutuhan, dan rincian task bernomor yang siap dipakai AI coding agent.",
+      "Jelaskan ide aplikasi atau fitur, dapatkan PRD lengkap: tujuan, user story, kebutuhan, dan rincian task bernomor yang siap dipakai AI coding agent lewat MCP server.",
     cta: "Buat PRD",
   },
   {
@@ -82,22 +74,15 @@ export default function Home() {
             </Reveal>
             <Reveal start={ready} delay={300}>
               <p className="mt-6 max-w-xl text-lg leading-relaxed text-muted-foreground">
-                Chat dengan beberapa model berdampingan, atau ubah ide kasar jadi PRD
-                terstruktur siap-agent dalam hitungan detik. Semuanya lewat gateway LLM
-                milikmu sendiri dan tersimpan di browser. Tanpa akun, tanpa database.
+                Ubah ide kasar jadi PRD, spesifikasi, rencana, dan tasks — lewat
+                MCP server. Coding agent tinggal ambil blueprint dan eksekusi.
+                Tanpa akun, tanpa database, data di browser kamu.
               </p>
             </Reveal>
             <Reveal start={ready} delay={400}>
               <div className="mt-8 flex flex-wrap items-center gap-3">
                 <Button render={<Link href="/plan" />} className="h-11 px-6 text-base">
                   Buat PRD
-                </Button>
-                <Button
-                  variant="outline"
-                  render={<Link href="/chat" />}
-                  className="h-11 px-6 text-base"
-                >
-                  Buka chat
                 </Button>
               </div>
             </Reveal>

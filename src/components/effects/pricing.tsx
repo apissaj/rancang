@@ -8,8 +8,9 @@ const plans = [
     period: "selamanya",
     description: "Self-host di mesin kamu sendiri, semua fitur dasar.",
     features: [
-      "Semua generator: PRD, desain, chat",
-      "Mode banding multi-model",
+      "Semua generator: PRD, desain",
+      "Mode banding multi-model di PRD",
+      "MCP server untuk coding agent",
       "Gateway LLM kamu sendiri",
       "Data 100% di browser",
       "Tanpa akun, tanpa database",
@@ -31,7 +32,7 @@ const plans = [
       "Prioritas request fitur",
     ],
     cta: "Pilih Pro",
-    href: "/chat",
+    href: "/plan",
     highlight: false,
   },
   {
@@ -47,7 +48,7 @@ const plans = [
       "Onboarding khusus",
     ],
     cta: "Hubungi kami",
-    href: "/chat",
+    href: "/plan",
     highlight: false,
   },
 ];

@@ -7,7 +7,6 @@ const columns = [
     title: "Produk",
     links: [
       { label: "Generator PRD", href: "/plan" },
-      { label: "Chat Multi-Model", href: "/chat" },
       { label: "Generator Desain", href: "/design" },
     ],
   },
