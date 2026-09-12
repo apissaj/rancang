@@ -1,8 +1,11 @@
 import { streamChatCompletion, toTextDeltaStream } from "@/lib/llm";
 import { getDefaultModel } from "@/lib/models";
 import { buildBlueprintContext, type BlueprintDocs } from "@/lib/blueprint-context";
+import { rateLimiter } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
+
+const limiter = rateLimiter(20, 60_000);
 
 // Cost guard: refuse absurdly large payloads instead of forwarding them upstream.
 const MAX_CONTEXT_CHARS = 400_000;
@@ -27,6 +30,9 @@ message is a request to change something, explain what you would change and tell
 press "Terapkan" (Apply) so the document gets rewritten in a dedicated pass.`;
 
 export async function POST(req: Request) {
+  const blocked = limiter.check(req);
+  if (blocked) return blocked;
+
   const { docs, history, message, model } = (await req.json()) as {
     docs?: BlueprintDocs;
     history?: Msg[];

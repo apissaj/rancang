@@ -1,8 +1,11 @@
 import { streamChatCompletion, toTextDeltaStream } from "@/lib/llm";
 import { getDefaultModel } from "@/lib/models";
 import { buildBlueprintContext, docLabel, type BlueprintDocs } from "@/lib/blueprint-context";
+import { rateLimiter } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
+
+const limiter = rateLimiter(20, 60_000);
 
 function systemForTarget(target?: string): string {
   if (target) {
@@ -17,6 +20,9 @@ function systemForTarget(target?: string): string {
 }
 
 export async function POST(req: Request) {
+  const blocked = limiter.check(req);
+  if (blocked) return blocked;
+
   const body = (await req.json()) as {
     markdown?: string;
     instruction?: string;

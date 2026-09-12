@@ -46,10 +46,21 @@ async function runStdio() {
 // rejects follow-up calls with "Server not initialized". One transport is
 // created on initialize and reused for every call carrying its session id.
 
+const MAX_BODY_BYTES = 1_000_000; // 1 MB
+
 function readBody(req) {
   return new Promise((resolve, reject) => {
     let data = "";
-    req.on("data", (chunk) => (data += chunk));
+    let bytes = 0;
+    req.on("data", (chunk) => {
+      bytes += chunk.length;
+      if (bytes > MAX_BODY_BYTES) {
+        req.destroy(); // kill connection immediately
+        reject(new Error("Payload too large (max 1 MB)"));
+        return;
+      }
+      data += chunk;
+    });
     req.on("end", () => {
       if (!data) return resolve(undefined);
       try {

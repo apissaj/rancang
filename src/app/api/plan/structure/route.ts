@@ -2,8 +2,11 @@ import { NextResponse } from "next/server";
 import { chatCompletion } from "@/lib/llm";
 import { getDefaultModel } from "@/lib/models";
 import type { StructureResponse } from "@/lib/clarify-types";
+import { rateLimiter } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
+
+const limiter = rateLimiter(30, 60_000);
 
 const SYSTEM_PROMPT = `You are a senior product manager scoping an app before writing a PRD.
 Given a short app or feature idea (and optionally the user's clarifying answers), break it
@@ -37,6 +40,9 @@ function parseJsonLoose(text: string): unknown {
 }
 
 export async function POST(req: Request) {
+  const blocked = limiter.check(req);
+  if (blocked) return blocked;
+
   try {
     const { idea, answers, model } = (await req.json()) as {
       idea: string;

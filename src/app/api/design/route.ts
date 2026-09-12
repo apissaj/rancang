@@ -2,8 +2,10 @@ import { NextResponse } from "next/server";
 import { chatCompletion } from "@/lib/llm";
 import { getDefaultModel } from "@/lib/models";
 import type { Screen } from "@/lib/storage";
+import { rateLimiter } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
+const limiter = rateLimiter(20, 60_000);
 
 type DesignResponse = { designMd: string; screens: Screen[] };
 
@@ -90,6 +92,9 @@ function buildUserMessage(idea: string, planMarkdown: string | undefined, vibe: 
 }
 
 export async function POST(req: Request) {
+  const blocked = limiter.check(req);
+  if (blocked) return blocked;
+
   const { idea, planMarkdown, vibe, platform, pwa } = (await req.json()) as {
     idea: string;
     planMarkdown?: string;

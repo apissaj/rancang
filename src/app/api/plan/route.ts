@@ -1,7 +1,10 @@
 import { streamChatCompletion, toTextDeltaStream } from "@/lib/llm";
 import { getDefaultModel } from "@/lib/models";
+import { rateLimiter } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
+
+const limiter = rateLimiter(20, 60_000);
 
 const SYSTEM_PROMPT = `You are a senior product manager and staff engineer who writes precise, actionable PRDs.
 Given a short app or feature idea, produce a complete Product Requirements Document in GitHub-flavored Markdown.
@@ -34,6 +37,9 @@ function buildUserMessage(idea: string, answers?: Answer[]): string {
 }
 
 export async function POST(req: Request) {
+  const blocked = limiter.check(req);
+  if (blocked) return blocked;
+
   const { idea, answers, model } = (await req.json()) as { idea: string; answers?: Answer[]; model?: string };
 
   if (!idea || !idea.trim()) {

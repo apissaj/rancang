@@ -1,7 +1,10 @@
 import { streamChatCompletion, toTextDeltaStream } from "@/lib/llm";
 import { getDefaultModel } from "@/lib/models";
+import { rateLimiter } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
+
+const limiter = rateLimiter(10, 60_000);
 
 /**
  * Multi-document blueprint generator — combines Rancang UX with GitHub
@@ -98,6 +101,9 @@ function buildUserMessage(idea: string, answers?: Answer[]): string {
 }
 
 export async function POST(req: Request) {
+  const blocked = limiter.check(req);
+  if (blocked) return blocked;
+
   const { idea, answers, model } = (await req.json()) as {
     idea: string;
     answers?: Answer[];

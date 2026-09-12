@@ -3,9 +3,11 @@ import { generateScreenImage } from "@/lib/image-gen";
 import { extractFrontMatter, resolveTokens } from "@/lib/design-yaml";
 import { saveImage } from "@/lib/image-storage";
 import type { Screen } from "@/lib/storage";
+import { rateLimiter } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 120;
+const limiter = rateLimiter(10, 60_000);
 
 type Tokens = {
   colors?: { primary?: string; secondary?: string; tertiary?: string; neutral?: string };
@@ -43,6 +45,9 @@ function buildPrompt(screen: Screen, designMd: string, styleHint?: string): stri
 }
 
 export async function POST(req: Request) {
+  const blocked = limiter.check(req);
+  if (blocked) return blocked;
+
   const { screen, designMd, styleHint, designId } = (await req.json()) as {
     screen: Screen;
     designMd: string;

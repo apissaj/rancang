@@ -33,11 +33,16 @@ yarn-error.log*
 .env
 .env.local
 .env*.local
+.env.full
 
-# typescript
+# secrets: service account keys, credentials, private keys
+*-service-account*.json
+*-firebase-admin*.json
+*-sa.json
+credentials.json
+*.key
 *.tsbuildinfo
 next-env.d.ts
-.env.full
 
 # local dev image storage (dev default, not used in prod container)
 /data
@@ -45,3 +50,5 @@ next-env.d.ts
 # local research/reference assets (not part of the app)
 /react-bits-ref
 /spec-kit-assets
+*.log
+!package-lock.json

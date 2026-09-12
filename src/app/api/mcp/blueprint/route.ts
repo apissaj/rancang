@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { DOC_NAMES, listBlueprints, resolveBlueprint, saveBlueprint } from "@/lib/mcp/store.mjs";
+import { rateLimiter } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
+const limiter = rateLimiter(60, 60_000);
 
 /**
  * Blueprint bridge for the MCP layer.
@@ -34,6 +36,9 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const blocked = limiter.check(req);
+  if (blocked) return blocked;
+
   let body: unknown;
   try {
     body = await req.json();
