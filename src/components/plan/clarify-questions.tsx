@@ -83,13 +83,14 @@ export function ClarifyQuestions({
                 </div>
               )}
               {noteVisible && (
-                <Input
-                  placeholder="Tambah detail..."
-                  value={answers[q.id]?.note ?? ""}
-                  onChange={(e) => setNote(q.id, e.target.value)}
-                  className="mt-1"
-                />
-              )}
+                              <Input
+                                placeholder="Tambah detail..."
+                                aria-label={`Catatan tambahan untuk: ${q.question}`}
+                                value={answers[q.id]?.note ?? ""}
+                                onChange={(e) => setNote(q.id, e.target.value)}
+                                className="mt-1"
+                              />
+                            )}
             </CardContent>
           </Card>
         );

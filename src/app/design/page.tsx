@@ -535,13 +535,16 @@ function ResultView({
 
   const restoreVersion = () => {
     if (!viewedVersion) return;
+    const idx = versions.findIndex((v) => v.id === viewedVersion.id) + 1;
+    const isLatest = idx === versions.length;
+    if (!isLatest && !window.confirm(`Pulihkan versi v${idx}? Versi saat ini akan disimpan sebagai riwayat (tidak hilang).`)) return;
     persistNewVersion({
       id: nanoid(),
       designMd: viewedVersion.designMd,
       screens: viewedVersion.screens,
       createdAt: Date.now(),
       source: "manual-edit",
-      note: `Restored from v${versions.findIndex((v) => v.id === viewedVersion.id) + 1}`,
+      note: `Restored from v${idx}`,
     });
   };
 

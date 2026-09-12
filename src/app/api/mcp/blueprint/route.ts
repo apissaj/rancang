@@ -22,6 +22,8 @@ const MAX_TOTAL_CHARS = 800_000;
  */
 
 export async function GET(req: NextRequest) {
+  const limited = limiter.check(req);
+  if (limited) return limited;
   const id = req.nextUrl.searchParams.get("id");
   try {
     if (id) {

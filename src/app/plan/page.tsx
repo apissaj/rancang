@@ -585,12 +585,15 @@ export default function PlanPage() {
 
   const restoreVersion = () => {
     if (!activePlan || !viewedVersion) return;
+    const idx = versions.findIndex((v) => v.id === viewedVersion.id) + 1;
+    const isLatest = idx === versions.length;
+    if (!isLatest && !window.confirm(`Pulihkan versi v${idx}? Versi saat ini akan disimpan sebagai riwayat (tidak hilang).`)) return;
     persistNewVersion(activePlan, {
       id: nanoid(),
       markdown: viewedVersion.markdown,
       createdAt: Date.now(),
       source: "manual-edit",
-      note: `Restored from v${versions.findIndex((v) => v.id === viewedVersion.id) + 1}`,
+      note: `Restored from v${idx}`,
     });
   };
 
