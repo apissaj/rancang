@@ -31,6 +31,9 @@ export type PlanRecord = {
   docs?: Record<string, string>;
   /** Q&A conversation about this blueprint, oldest message first. */
   chat?: BlueprintChatMessage[];
+  /** Blueprint id assigned by the MCP bridge — persisted so "Salin Prompt MCP"
+      survives reloads and switching plans. */
+  mcpId?: string;
 };
 
 export type BlueprintChatMessage = {
@@ -102,12 +105,13 @@ export const conversationStore = {
 // If the old markdown still contains `<!-- DOC:xxx -->` markers (saved by the
 // buggy stream parser that dumped everything into one blob), split it back into
 // per-document docs so the spec/plan/tasks tabs show their own content.
-function migratePlan(p: PlanRecord & { versions?: PlanVersion[]; docs?: Record<string,string>; chat?: BlueprintChatMessage[] }): PlanRecord {
+function migratePlan(p: PlanRecord & { versions?: PlanVersion[]; docs?: Record<string,string>; chat?: BlueprintChatMessage[]; mcpId?: string }): PlanRecord {
   const migrated: PlanRecord = {
     ...p,
     versions: p.versions && p.versions.length > 0 ? p.versions : [{ id: `${p.id}-v1`, markdown: p.markdown, createdAt: p.createdAt, source: "generated" }],
     // Records saved before the blueprint chat existed simply have no history.
     chat: Array.isArray(p.chat) ? p.chat : undefined,
+    mcpId: typeof p.mcpId === "string" ? p.mcpId : undefined,
   };
   if (!migrated.docs || Object.keys(migrated.docs).length === 0) {
     if (migrated.markdown) {

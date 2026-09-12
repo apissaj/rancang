@@ -30,7 +30,15 @@ export async function POST(req: Request) {
     return new Response("instruction is required", { status: 400 });
   }
 
-  const target: string | undefined = body.target?.trim() || undefined;
+  const rawTarget: string | undefined = body.target?.trim() || undefined;
+  const ALLOWED_TARGETS = ["prd", "spec", "plan", "tasks"] as const;
+  type AllowedTarget = typeof ALLOWED_TARGETS[number];
+  if (rawTarget && !ALLOWED_TARGETS.includes(rawTarget as AllowedTarget)) {
+    return new Response(`Target tidak valid: "${rawTarget}". Pilih salah satu: ${ALLOWED_TARGETS.join(", ")}.`, {
+      status: 400,
+    });
+  }
+  const target: AllowedTarget | undefined = rawTarget as AllowedTarget | undefined;
   let currentMarkdown: string;
   let context: string;
 

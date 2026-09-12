@@ -66,9 +66,21 @@ async function runHttp() {
   const port = Number(process.env.RANCANG_MCP_PORT || 3110);
   const sessions = new Map(); // sessionId -> transport
 
+  // Local web app (Rancang :3100) is the only allowed browser origin. Anything
+  // else (a random website hitting http://127.0.0.1:3110 via the victim's
+  // browser = DNS rebinding / CSRF) gets no CORS and is rejected pre-handshake.
+  const ALLOWED_ORIGIN = process.env.RANCANG_MCP_ORIGIN || "http://localhost:3100";
+
   const httpServer = http.createServer(async (req, res) => {
     // CORS so the Rancang web app can call this from a different origin.
-    res.setHeader("Access-Control-Allow-Origin", "*");
+    const { origin } = req.headers;
+    const originOk = !origin || origin === ALLOWED_ORIGIN || origin === "http://127.0.0.1:3100";
+    if (!originOk) {
+      res.writeHead(403, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ error: "origin not allowed" }));
+      return;
+    }
+    res.setHeader("Access-Control-Allow-Origin", origin || ALLOWED_ORIGIN);
     res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, Mcp-Session-Id, Origin");
     res.setHeader("Access-Control-Expose-Headers", "Mcp-Session-Id");
     res.setHeader("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS");

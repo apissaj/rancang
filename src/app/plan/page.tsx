@@ -105,6 +105,9 @@ export default function PlanPage() {
   useEffect(() => {
     setPlans(planStore.all());
     setActiveId(null);
+    setMcpBlueprintId(null);
+    setMcpCopied(false);
+    mcpIds.current = {};
     setIdea("");
     setMarkdown("");
     setError(null);
@@ -202,6 +205,8 @@ export default function PlanPage() {
     setError(null);
     setMarkdown("");
     setActiveId(null);
+    setMcpBlueprintId(null);
+    setMcpCopied(false);
     setClarify(null);
     const ideaText = idea;
     const now = Date.now();
@@ -327,6 +332,12 @@ export default function PlanPage() {
       const data = (await res.json()) as { id: string };
       mcpIds.current[record.id] = data.id;
       setMcpBlueprintId(data.id);
+      // Persist the bridge-assigned id on the record so a page reload or plan
+      // switch can restore the "Salin Prompt MCP" button without re-publishing.
+      if (data.id !== record.mcpId) {
+        const stored = planStore.all().find((p) => p.id === record.id);
+        if (stored) planStore.save({ ...stored, mcpId: data.id });
+      }
       if (!opts?.silent) setMcpCopied(true);
     } catch {
       if (!opts?.silent) setError("Blueprint tersimpan lokal, tapi MCP bridge tidak jalan (port 3110?).");
@@ -432,7 +443,19 @@ export default function PlanPage() {
     setEditing(false);
     setViewingVersionId(null);
     setAiInstruction("");
+    // Restore the MCP blueprint id saved on the record (if any) so the
+    // "Salin Prompt MCP" button reappears after reload/plan-switch; older
+    // records that predate persistence just fall back to re-publishing.
+    const mcpId = plan.mcpId ?? mcpIds.current[id] ?? null;
+    setMcpBlueprintId(mcpId);
+    setMcpCopied(false);
+    if (mcpId) mcpIds.current[id] = mcpId;
     setChatByPlan((prev) => ({ ...prev, [id]: plan.chat ?? prev[id] ?? [] }));
+    if (plan.docs && !mcpId) {
+      // Published once (bridge still has it) but id lost pre-persistence —
+      // re-publish silently to get a fresh id so the button shows.
+      void publishMCP(plan, { silent: true });
+    }
   };
 
   const activePlan = activeId ? plans.find((p) => p.id === activeId) ?? null : null;
