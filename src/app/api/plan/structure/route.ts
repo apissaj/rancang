@@ -3,6 +3,7 @@ import { chatCompletion } from "@/lib/llm";
 import { getDefaultModel, getAvailableModels } from "@/lib/models";
 import type { StructureResponse } from "@/lib/clarify-types";
 import { rateLimiter } from "@/lib/rate-limit";
+import { ANTI_SLOP_PRD_RULES } from "@/lib/anti-slop";
 
 export const dynamic = "force-dynamic";
 
@@ -30,6 +31,7 @@ Rules:
 - Produce 3-6 features.
 - Each feature has 2-5 concrete sub-features (specific, actionable, not vague).
 - Use Indonesian. Keep names concise (2-6 words).
+${ANTI_SLOP_PRD_RULES}
 - Output only the JSON object.`;
 
 /** Strip markdown code fences models sometimes wrap JSON in despite instructions. */

@@ -1,6 +1,7 @@
 import { streamChatCompletion, toTextDeltaStream } from "@/lib/llm";
 import { getDefaultModel, getAvailableModels } from "@/lib/models";
 import { rateLimiter } from "@/lib/rate-limit";
+import { ANTI_SLOP_PRD_RULES } from "@/lib/anti-slop";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +24,7 @@ Use exactly these top-level sections, in this order, each as an "## " heading:
 Rules:
 - "Task Breakdown" must be a numbered list of small, actionable, sequential steps suitable for an AI coding agent to execute one at a time. Each step should be a single concrete unit of work.
 - Be specific to the idea given. Do not use placeholder text like "TBD".
+${ANTI_SLOP_PRD_RULES}
 - Output only the Markdown document, no preamble or commentary.`;
 
 type Answer = { question: string; selected: string[]; note?: string };

@@ -1,6 +1,7 @@
 import { streamChatCompletion, toTextDeltaStream } from "@/lib/llm";
 import { getDefaultModel, getAvailableModels } from "@/lib/models";
 import { rateLimiter } from "@/lib/rate-limit";
+import { ANTI_SLOP_PRD_RULES } from "@/lib/anti-slop";
 
 export const dynamic = "force-dynamic";
 
@@ -32,6 +33,7 @@ Use exactly these top-level sections, in this order, each as an "## " heading:
 Rules:
 - "Task Breakdown" must be a numbered list of small, actionable, sequential steps suitable for an AI coding agent to execute one at a time. Each step should be a single concrete unit of work.
 - Be specific to the idea given. Do not use placeholder text like "TBD".
+${ANTI_SLOP_PRD_RULES}
 - Output only the Markdown document, no preamble or commentary.`,
 
   spec: `You are a senior software architect writing a Feature Specification following the GitHub Spec-Kit format.
@@ -47,6 +49,7 @@ Use exactly these top-level sections, in this order, each as an "## " heading:
 
 Rules:
 - Be specific to the idea given. Do not use placeholder text like "TBD" or "[FEATURE NAME]".
+${ANTI_SLOP_PRD_RULES}
 - Output only the Markdown document, no preamble or commentary.`,
 
   plan: `You are a staff engineer writing a technical Implementation Plan following the GitHub Spec-Kit format.
@@ -61,6 +64,7 @@ Use exactly these top-level sections, in this order, each as an "## " heading:
 
 Rules:
 - Be specific to the idea given. Do not use placeholder text like "TBD" or "[FEATURE]".
+${ANTI_SLOP_PRD_RULES}
 - Output only the Markdown document, no preamble or commentary.`,
 
   tasks: `You are a technical project manager generating an actionable task list following the GitHub Spec-Kit format.
@@ -86,6 +90,7 @@ Sections:
 
 Rules:
 - Be specific to the idea given. Do not use placeholder text like "TBD".
+${ANTI_SLOP_PRD_RULES}
 - Output only the Markdown document, no preamble or commentary.`,
 };
 

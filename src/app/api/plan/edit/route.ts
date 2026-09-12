@@ -2,6 +2,7 @@ import { streamChatCompletion, toTextDeltaStream } from "@/lib/llm";
 import { getDefaultModel, getAvailableModels } from "@/lib/models";
 import { buildBlueprintContext, docLabel, type BlueprintDocs } from "@/lib/blueprint-context";
 import { rateLimiter } from "@/lib/rate-limit";
+import { ANTI_SLOP_PRD_RULES } from "@/lib/anti-slop";
 
 export const dynamic = "force-dynamic";
 
@@ -13,10 +14,11 @@ function systemForTarget(target?: string): string {
     return (
       `You are revising exactly one document of a larger blueprint: ${label} (${target}.md).\n` +
       `The other documents are read-only context — do NOT include them in the response.\n` +
-      `Return the FULL revised ${label} and nothing else (no wrapper, no headings added beyond what the ${label} calls for).`
+      `Return the FULL revised ${label} and nothing else (no wrapper, no headings added beyond what the ${label} calls for).\n` +
+      ANTI_SLOP_PRD_RULES
     );
   }
-  return "You are revising a single-document blueprint (PRD). Return the FULL revised document in the same structure, not a diff or partial excerpt, no preamble or commentary.";
+  return `You are revising a single-document blueprint (PRD). Return the FULL revised document in the same structure, not a diff or partial excerpt, no preamble or commentary.\n${ANTI_SLOP_PRD_RULES}`;
 }
 
 export async function POST(req: Request) {

@@ -3,6 +3,7 @@ import { chatCompletion } from "@/lib/llm";
 import { getDefaultModel, getAvailableModels } from "@/lib/models";
 import type { Screen } from "@/lib/storage";
 import { rateLimiter } from "@/lib/rate-limit";
+import { ANTI_SLOP_DESIGN_MD_RULES, ANTI_SLOP_SCREEN_RULES } from "@/lib/anti-slop";
 
 export const dynamic = "force-dynamic";
 const limiter = rateLimiter(20, 60_000);
@@ -50,6 +51,7 @@ Front matter rules:
 
 In the "## Layout" section, note responsive breakpoints if platform is "both". If pwa is true, add
 manifest/service-worker/installable guidance to "## Overview" or "## Do's and Don'ts".
+${ANTI_SLOP_DESIGN_MD_RULES}
 
 screens: produce 4-8 screens covering the idea's core user flows, each with 5-10 components using ONLY
 these types: header, text, button, input, list-item, card, nav-item, image-placeholder, divider.
@@ -57,6 +59,7 @@ Components that navigate to another screen MUST set "onClick" to that screen's "
 "both", generate the SAME logical screens twice: once with platform:"mobile" and ids like "home-mobile",
 once with platform:"web" and ids like "home-web" — each set's onClick targets must point only within its
 own platform's ids. If platform is "mobile" or "web" only, generate just that platform's screens.
+${ANTI_SLOP_SCREEN_RULES}
 
 Output only the JSON object.`;
 

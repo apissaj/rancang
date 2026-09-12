@@ -3,6 +3,7 @@ import { chatCompletion } from "@/lib/llm";
 import { getDefaultModel } from "@/lib/models";
 import type { ClarifyResponse } from "@/lib/clarify-types";
 import { rateLimiter } from "@/lib/rate-limit";
+import { ANTI_SLOP_PRD_RULES } from "@/lib/anti-slop";
 
 export const dynamic = "force-dynamic";
 
@@ -32,6 +33,11 @@ Respond with ONLY valid JSON, no markdown code fences, no commentary, matching e
 "type": "single" means the user picks exactly one option (radio buttons). "type": "multi" means
 the user can pick any number (checkboxes). Set "allowsNote": true on an option only when it
 represents an open-ended choice (e.g. "Other") that benefits from a free-text detail field.
+
+Anti-slop: keep questions concrete and grounded in the actual idea, not template cliches.
+Do NOT add a generic question like "Siapa target pengguna?" unless the idea genuinely
+needs it answered. Skip fluff; every question must change what the final PRD would say.
+${ANTI_SLOP_PRD_RULES}
 Output only the JSON object.`;
 
 /** Strip markdown code fences models sometimes wrap JSON in despite instructions. */

@@ -2,6 +2,7 @@ import { streamChatCompletion, toTextDeltaStream } from "@/lib/llm";
 import { getDefaultModel, getAvailableModels } from "@/lib/models";
 import { buildBlueprintContext, type BlueprintDocs } from "@/lib/blueprint-context";
 import { rateLimiter } from "@/lib/rate-limit";
+import { ANTI_SLOP_PRD_RULES } from "@/lib/anti-slop";
 
 export const dynamic = "force-dynamic";
 
@@ -24,6 +25,7 @@ Answer the user's question about the blueprint. Rules:
 - Be concise. No filler preamble, no restating the question.
 - Never invent features, endpoints, tables, or file paths that the blueprint does not contain.
   If the blueprint does not answer the question, say so and name the gap.
+${ANTI_SLOP_PRD_RULES}
 
 This is a QUESTION-AND-ANSWER exchange: do NOT rewrite a document here. If the user's
 message is a request to change something, explain what you would change and tell them to

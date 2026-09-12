@@ -3,6 +3,7 @@ import { chatCompletion } from "@/lib/llm";
 import { getDefaultModel, getAvailableModels } from "@/lib/models";
 import type { Screen } from "@/lib/storage";
 import { rateLimiter } from "@/lib/rate-limit";
+import { ANTI_SLOP_DESIGN_MD_RULES, ANTI_SLOP_SCREEN_RULES } from "@/lib/anti-slop";
 
 export const dynamic = "force-dynamic";
 const limiter = rateLimiter(20, 60_000);
@@ -20,6 +21,8 @@ the surface/background color, never used for body text or accents. "primary"/"se
 accents used sparingly for buttons/highlights/borders only, never for large blocks of body text. Every
 accent used as a button/component background must contrast well (WCAG AA) against its paired text color
 — avoid light/pastel accents (e.g. yellow) with white text on top.
+${ANTI_SLOP_DESIGN_MD_RULES}
+${ANTI_SLOP_SCREEN_RULES}
 
 Output ONLY valid JSON, no markdown code fences, matching exactly:
 { "designMd": "...", "screens": [ { "id": "...", "name": "...", "platform": "mobile" | "web", "components": [ { "type": "...", "label": "...", "onClick": "..." } ] } ] }`;
