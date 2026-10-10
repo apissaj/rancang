@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { nanoid } from "nanoid";
 import { Check, Copy, Download, Loader2, ChevronLeft, ChevronRight, FolderOpen } from "lucide-react";
 import { ScaffoldDialog } from "@/components/scaffold-dialog";
+import { toastManager } from "@/components/ui/toast";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -128,11 +129,15 @@ function DesignPageInner() {
 
   const deleteDesign = (id: string) => {
     const target = designStore.all().find((d) => d.id === id);
-    if (!window.confirm(`Delete "${target?.title ?? "this design"}"? This can't be undone.`)) return;
     designStore.remove(id);
     setDesigns(designStore.all());
     sync.deleteDesignRemote(id);
     if (activeId === id) resetToSetup();
+    toastManager.add({
+      title: "Desain dihapus",
+      description: target ? `"${target.title || "Untitled design"}" telah dihapus.` : undefined,
+      type: "success",
+    });
   };
 
   useEffect(() => {

@@ -3,6 +3,17 @@
 import { Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  AlertDialog,
+  AlertDialogTrigger,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogAction,
+  AlertDialogCancel,
+} from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import type { DesignRecord } from "@/lib/storage";
 
@@ -48,15 +59,33 @@ export function DesignSidebar({
               >
                 {d.title || "Untitled design"}
               </button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6 opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
-                onClick={() => onDelete(d.id)}
-                aria-label={`Delete design ${d.title}`}
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-              </Button>
+              <AlertDialog>
+                <AlertDialogTrigger
+                  render={
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
+                      aria-label={`Hapus desain ${d.title || "tanpa judul"}`}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  }
+                />
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Hapus desain ini?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      &ldquo;{d.title || "Untitled design"}&rdquo; akan dihapus permanen, termasuk semua layar
+                      dan gambarnya. Tindakan ini tidak bisa dibatalkan.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Batal</AlertDialogCancel>
+                    <AlertDialogAction onClick={() => onDelete(d.id)}>Hapus</AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </div>
           ))}
           {designs.length === 0 && (

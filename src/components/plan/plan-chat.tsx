@@ -12,6 +12,17 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Markdown } from "@/components/markdown";
+import {
+  AlertDialog,
+  AlertDialogTrigger,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogAction,
+  AlertDialogCancel,
+} from "@/components/ui/alert-dialog";
 import type { BlueprintChatMessage } from "@/lib/storage";
 
 const QUICK_PROMPTS = [
@@ -158,12 +169,27 @@ export function PlanChat({
           Tanya blueprint
         </span>
         {messages.length > 0 && (
-          <button
-            onClick={() => onMessagesChange([])}
-            className="text-xs text-muted-foreground transition-colors hover:text-foreground"
-          >
-            Bersihkan
-          </button>
+          <AlertDialog>
+            <AlertDialogTrigger
+              render={
+                <button className="text-xs text-muted-foreground transition-colors hover:text-foreground">
+                  Bersihkan
+                </button>
+              }
+            />
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Bersihkan percakapan?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Semua pesan pada percakapan ini akan dihapus. Dokumen blueprint tidak terpengaruh.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Batal</AlertDialogCancel>
+                <AlertDialogAction onClick={() => onMessagesChange([])}>Bersihkan</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         )}
       </div>
 
