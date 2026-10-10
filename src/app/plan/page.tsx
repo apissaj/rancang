@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { nanoid } from "nanoid";
-import { Check, Copy, Download, FileText, Loader2, Bot, ChevronDown, ChevronRight, Bookmark, Zap, MessageSquare, Palette, FolderOpen } from "lucide-react";
+import { Check, Copy, Download, FileText, Loader2, Bot, ChevronDown, ChevronRight, Bookmark, Zap, MessageSquare, Palette } from "lucide-react";
 import JSZip from "jszip";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,7 +22,6 @@ import { PlanSidebar } from "@/components/plan/plan-sidebar";
 import FeatureMap from "@/components/plan/feature-map";
 import { ClarifyQuestions, type QuestionAnswers } from "@/components/plan/clarify-questions";
 import { PlanChat } from "@/components/plan/plan-chat";
-import { ScaffoldDialog } from "@/components/scaffold-dialog";
 import { toastManager } from "@/components/ui/toast";
 import { planStore, type PlanRecord, type PlanVersion, type BlueprintChatMessage } from "@/lib/storage";
 import type { ClarifyResponse, StructureResponse } from "@/lib/clarify-types";
@@ -77,9 +76,6 @@ export default function PlanPage() {
   const [docStatus, setDocStatus] = useState<Record<string, DocStatus>>({});
   const [editing, setEditing] = useState(false);
   const [editDraft, setEditDraft] = useState("");
-  const [aiInstruction, setAiInstruction] = useState("");
-  const [aiEditing, setAiEditing] = useState(false);
-  const [viewingVersionId, setViewingVersionId] = useState<string | null>(null); // null = current
   const [multiMode, setMultiMode] = useState(true);
   const [docs, setDocs] = useState<Record<string, string>>({});
   const [mcpBlueprintId, setMcpBlueprintId] = useState<string | null>(null);
@@ -341,7 +337,6 @@ export default function PlanPage() {
       planStore.save(record);
       setPlans(planStore.all());
       setActiveId(record.id);
-      setViewingVersionId(null);
       setEditing(false);
       sync.syncPlan(record);
       setIdea("");
@@ -503,8 +498,6 @@ export default function PlanPage() {
     setClarify(null);
     setCompareColumns(null);
     setEditing(false);
-    setViewingVersionId(null);
-    setAiInstruction("");
     // Restore the MCP blueprint id saved on the record (if any) so the
     // "Salin Prompt MCP" button reappears after reload/plan-switch; older
     // records that predate persistence just fall back to re-publishing.
@@ -540,8 +533,7 @@ export default function PlanPage() {
     });
   };
   const versions = activePlan?.versions ?? [];
-  const viewedVersion = viewingVersionId ? versions.find((v) => v.id === viewingVersionId) ?? null : null;
-  const displayedMarkdown = viewedVersion ? viewedVersion.markdown : markdown;
+  const displayedMarkdown = markdown;
   const currentDocContent = multiMode && Object.keys(docs).length > 0 ? docs[activeDoc] || "" : displayedMarkdown;
 
   const persistChat = (planId: string, chat: BlueprintChatMessage[]) => {
@@ -558,7 +550,6 @@ export default function PlanPage() {
     sync.syncPlan(updated);
     setPlans(planStore.all());
     setMarkdown(updated.markdown);
-    setViewingVersionId(null);
     return updated;
   };
 
@@ -611,56 +602,6 @@ export default function PlanPage() {
       source: "manual-edit",
     });
     setEditing(false);
-  };
-
-  const runAiEdit = async () => {
-    if (!activePlan || !aiInstruction.trim() || aiEditing) return;
-    setAiEditing(true);
-    setError(null);
-    const instruction = aiInstruction;
-    try {
-      const res = await fetch("/api/plan/edit", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ markdown, instruction }),
-      });
-      if (!res.ok || !res.body) throw new Error(await res.text());
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let full = "";
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        full += decoder.decode(value, { stream: true });
-        setMarkdown(full);
-      }
-      persistNewVersion(activePlan, {
-        id: nanoid(),
-        markdown: full,
-        createdAt: Date.now(),
-        source: "ai-edit",
-        note: instruction,
-      });
-      setAiInstruction("");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Terjadi kesalahan");
-    } finally {
-      setAiEditing(false);
-    }
-  };
-
-  const restoreVersion = () => {
-    if (!activePlan || !viewedVersion) return;
-    const idx = versions.findIndex((v) => v.id === viewedVersion.id) + 1;
-    const isLatest = idx === versions.length;
-    if (!isLatest && !window.confirm(`Pulihkan versi v${idx}? Versi saat ini akan disimpan sebagai riwayat (tidak hilang).`)) return;
-    persistNewVersion(activePlan, {
-      id: nanoid(),
-      markdown: viewedVersion.markdown,
-      createdAt: Date.now(),
-      source: "manual-edit",
-      note: `Restored from v${idx}`,
-    });
   };
 
   const copyMarkdown = async () => {
@@ -1011,27 +952,6 @@ export default function PlanPage() {
                 </div>
               )}
               <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
-                {activePlan && versions.length > 0 && !editing && (
-                  <Select
-                    value={viewingVersionId ?? "current"}
-                    onValueChange={(v) => setViewingVersionId(v === "current" ? null : v)}
-                  >
-                    <SelectTrigger className="h-8 w-40">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {[...versions].reverse().map((v) => {
-                        const idx = versions.findIndex((x) => x.id === v.id);
-                        const isLatest = idx === versions.length - 1;
-                        return (
-                          <SelectItem key={v.id} value={isLatest ? "current" : v.id}>
-                            {versionLabel(v, idx)}
-                          </SelectItem>
-                        );
-                      })}
-                    </SelectContent>
-                  </Select>
-                )}
                 {mcpBlueprintId && (
                   <Button
                     variant="outline"
@@ -1043,12 +963,6 @@ export default function PlanPage() {
                     {mcpCopied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
                     <span className="truncate">{mcpCopied ? "Prompt tersalin" : "Salin Prompt MCP"}</span>
                   </Button>
-                )}
-                {mcpBlueprintId && (
-                  <ScaffoldDialog
-                    blueprintId={mcpBlueprintId}
-                    blueprintTitle={activePlan?.title ?? "Blueprint"}
-                  />
                 )}
                 {activePlan && (
                   <Button
@@ -1063,34 +977,6 @@ export default function PlanPage() {
                 )}
               </div>
             </div>
-            {!editing && (currentDocContent || markdown) && !loading && activePlan && (
-              <div className="flex flex-wrap items-center gap-2 border-b bg-muted/30 px-4 py-2">
-                <input
-                  id="ai-instruction-input"
-                  name="ai-instruction"
-                  aria-label="Instruksi perubahan dokumen dengan AI"
-                  value={aiInstruction}
-                  onChange={(e) => setAiInstruction(e.target.value)}
-                  placeholder="Ubah bagian X jadi... / Tambah section tentang... / Buat goals lebih spesifik"
-                  className="h-8 flex-1 min-w-[200px] rounded-md border border-input bg-transparent px-2.5 text-sm outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-                  disabled={aiEditing}
-                />
-                <Button size="sm" onClick={runAiEdit} disabled={aiEditing || !aiInstruction.trim()}>
-                  {aiEditing && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-                  {aiEditing ? "Merevisi..." : "Revisi"}
-                </Button>
-              </div>
-            )}
-            {viewedVersion && (
-              <div className="flex items-center justify-between gap-2 border-b bg-amber-500/10 px-4 py-2 text-sm">
-                <span>
-                  Melihat v{versions.findIndex((v) => v.id === viewedVersion.id) + 1} (bukan terbaru)
-                </span>
-                <Button size="sm" variant="outline" onClick={restoreVersion}>
-                  Pulihkan versi ini
-                </Button>
-              </div>
-            )}
             <div className="flex-1 overflow-auto p-4">
               {editing ? (
                 <Textarea
@@ -1185,10 +1071,7 @@ function Stepper({ current }: { current: StepKey }) {
           </li>
         );
       })}
-    </ol>
-  );
-}
-function versionLabel(v: PlanVersion, index: number): string {
-  const sourceLabel = v.source === "generated" ? "Dibuat" : v.source === "manual-edit" ? "Edit manual" : "Edit AI";
-  return `v${index + 1} · ${sourceLabel} · ${timeAgo(v.createdAt)}`;
-}
+     </ol>
+   );
+ }
+
