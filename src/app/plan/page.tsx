@@ -987,67 +987,13 @@ export default function PlanPage() {
                 </div>
               </div>
             )}
-            <div className="flex flex-col gap-2 border-b bg-muted/20 px-4 py-2">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="flex items-center gap-1.5 text-sm font-medium">
-                  <FileText className="h-4 w-4 text-muted-foreground" />
-                  Pratinjau
-                </span>
-                <div className="flex flex-wrap items-center justify-end gap-2">
-                  {activePlan && versions.length > 0 && !editing && (
-                    <Select
-                      value={viewingVersionId ?? "current"}
-                      onValueChange={(v) => setViewingVersionId(v === "current" ? null : v)}
-                    >
-                      <SelectTrigger className="h-8 w-48">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {[...versions].reverse().map((v) => {
-                          const idx = versions.findIndex((x) => x.id === v.id);
-                          const isLatest = idx === versions.length - 1;
-                          return (
-                            <SelectItem key={v.id} value={isLatest ? "current" : v.id}>
-                              {versionLabel(v, idx)}
-                            </SelectItem>
-                          );
-                        })}
-                      </SelectContent>
-                    </Select>
-                  )}
-                  {mcpBlueprintId && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={copyMcpPrompt}
-                      title="Salin prompt siap-tempel untuk agent coding kamu"
-                      className="min-w-[9.5rem]"
-                    >
-                      {mcpCopied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-                      <span className="truncate">{mcpCopied ? "Prompt tersalin" : "Salin Prompt MCP"}</span>
-                    </Button>
-                  )}
-                  {mcpBlueprintId && (
-                    <ScaffoldDialog
-                      blueprintId={mcpBlueprintId}
-                      blueprintTitle={activePlan?.title ?? "Blueprint"}
-                    />
-                  )}
-                  {activePlan && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      nativeButton={false} render={<Link href={`/design?planId=${activePlan.id}`} />}
-                      title="Buat desain visual dan prototype wireframe dari PRD ini"
-                    >
-                      <Palette className="h-3.5 w-3.5" />
-                      Buat Desain
-                    </Button>
-                  )}
-                </div>
-              </div>
+            <div className="flex flex-wrap items-center gap-2 border-b bg-muted/20 px-4 py-2">
+              <span className="flex items-center gap-1.5 text-sm font-medium">
+                <FileText className="h-4 w-4 text-muted-foreground" />
+                Pratinjau
+              </span>
               {multiMode && !compareColumns && (
-                <div className="flex items-center gap-1 overflow-x-auto rounded-lg border bg-background/60 p-1">
+                <div className="flex items-center gap-1 rounded-lg border bg-background/60 p-1">
                   {DOC_NAMES.map((doc) => (
                     <button
                       key={doc}
@@ -1064,6 +1010,58 @@ export default function PlanPage() {
                   ))}
                 </div>
               )}
+              <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
+                {activePlan && versions.length > 0 && !editing && (
+                  <Select
+                    value={viewingVersionId ?? "current"}
+                    onValueChange={(v) => setViewingVersionId(v === "current" ? null : v)}
+                  >
+                    <SelectTrigger className="h-8 w-40">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {[...versions].reverse().map((v) => {
+                        const idx = versions.findIndex((x) => x.id === v.id);
+                        const isLatest = idx === versions.length - 1;
+                        return (
+                          <SelectItem key={v.id} value={isLatest ? "current" : v.id}>
+                            {versionLabel(v, idx)}
+                          </SelectItem>
+                        );
+                      })}
+                    </SelectContent>
+                  </Select>
+                )}
+                {mcpBlueprintId && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={copyMcpPrompt}
+                    title="Salin prompt siap-tempel untuk agent coding kamu"
+                    className="min-w-[9.5rem]"
+                  >
+                    {mcpCopied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                    <span className="truncate">{mcpCopied ? "Prompt tersalin" : "Salin Prompt MCP"}</span>
+                  </Button>
+                )}
+                {mcpBlueprintId && (
+                  <ScaffoldDialog
+                    blueprintId={mcpBlueprintId}
+                    blueprintTitle={activePlan?.title ?? "Blueprint"}
+                  />
+                )}
+                {activePlan && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    nativeButton={false} render={<Link href={`/design?planId=${activePlan.id}`} />}
+                    title="Buat desain visual dan prototype wireframe dari PRD ini"
+                  >
+                    <Palette className="h-3.5 w-3.5" />
+                    Buat Desain
+                  </Button>
+                )}
+              </div>
             </div>
             {!editing && (currentDocContent || markdown) && !loading && activePlan && (
               <div className="flex flex-wrap items-center gap-2 border-b bg-muted/30 px-4 py-2">
