@@ -23,6 +23,7 @@ import FeatureMap from "@/components/plan/feature-map";
 import { ClarifyQuestions, type QuestionAnswers } from "@/components/plan/clarify-questions";
 import { PlanChat } from "@/components/plan/plan-chat";
 import { ScaffoldDialog } from "@/components/scaffold-dialog";
+import { toastManager } from "@/components/ui/toast";
 import { planStore, type PlanRecord, type PlanVersion, type BlueprintChatMessage } from "@/lib/storage";
 import type { ClarifyResponse, StructureResponse } from "@/lib/clarify-types";
 import { useSync } from "@/lib/use-sync";
@@ -522,6 +523,7 @@ export default function PlanPage() {
   const activePlan = activeId ? plans.find((p) => p.id === activeId) ?? null : null;
 
   const handleDelete = (id: string) => {
+    const removed = plans.find((p) => p.id === id);
     planStore.remove(id);
     setPlans(planStore.all());
     if (activeId === id) {
@@ -531,6 +533,11 @@ export default function PlanPage() {
       setDocs({});
       setError(null);
     }
+    toastManager.add({
+      title: "PRD dihapus",
+      description: removed ? `"${removed.title}" telah dihapus.` : undefined,
+      type: "success",
+    });
   };
   const versions = activePlan?.versions ?? [];
   const viewedVersion = viewingVersionId ? versions.find((v) => v.id === viewingVersionId) ?? null : null;
