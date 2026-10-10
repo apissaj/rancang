@@ -22,7 +22,7 @@ function ToastViewport() {
     <ToastPrimitive.Portal>
       <ToastPrimitive.Viewport
         data-slot="toast-viewport"
-        className="fixed top-4 left-1/2 z-[60] flex w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 flex-col gap-2 outline-none"
+        className="fixed top-4 left-1/2 z-[60] flex w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 flex-col gap-2 outline-none [&>*]:transition-transform [&>*]:duration-500 [&>*]:ease-[cubic-bezier(0.16,1,0.3,1)]"
       >
         {toasts.map((toast) => (
           <ToastItem key={toast.id} toast={toast} />
@@ -39,7 +39,11 @@ function ToastItem({ toast }: { toast: ToastPrimitive.Root.ToastObject }) {
       swipeDirection={["up", "left", "right"]}
       data-slot="toast"
       className={cn(
-        "flex w-full items-start gap-3 rounded-lg border border-border bg-popover px-4 py-3 text-sm text-popover-foreground shadow-lg outline-none transition-[opacity,transform] duration-200 ease-out translate-y-0 opacity-100 data-starting-style:-translate-y-4 data-starting-style:opacity-0 data-ending-style:-translate-y-4 data-ending-style:opacity-0"
+        "flex w-full origin-top items-start gap-3 rounded-lg border border-border bg-popover px-4 py-3 text-sm text-popover-foreground shadow-lg outline-none",
+        "transition-[opacity,transform,filter] duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] will-change-transform",
+        "translate-y-0 scale-100 opacity-100 blur-0",
+        "data-starting-style:-translate-y-2 data-starting-style:scale-[0.96] data-starting-style:opacity-0 data-starting-style:blur-[2px]",
+        "data-ending-style:-translate-y-2 data-ending-style:scale-[0.96] data-ending-style:opacity-0 data-ending-style:blur-[2px]"
       )}
     >
       <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" aria-hidden="true" />
