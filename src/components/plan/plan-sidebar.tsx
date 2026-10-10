@@ -50,14 +50,17 @@ export function PlanSidebar({
             >
               <button
                 onClick={() => onSelect(p.id)}
-                className="w-full rounded-md px-2.5 py-2 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+                className={cn(
+                  "w-full rounded-md px-2.5 py-2 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
+                  onDelete && "pr-9"
+                )}
                 title={p.title}
               >
-                <span className="flex items-center gap-1.5 truncate text-[13px] font-medium text-foreground">
+                <span className="flex min-w-0 items-center gap-1.5 truncate text-[13px] font-medium text-foreground">
                   <FileText className="h-3 w-3 shrink-0 text-muted-foreground" />
-                  {p.title}
+                  <span className="truncate">{p.title}</span>
                 </span>
-                <span className="truncate pl-[18px] text-[11px] text-muted-foreground">
+                <span className="block truncate pl-[18px] text-[11px] text-muted-foreground">
                   {p.markdown ? (
                     <>
                       {timeAgo(p.createdAt)}
@@ -74,7 +77,7 @@ export function PlanSidebar({
                     e.stopPropagation();
                     if (window.confirm(`Hapus PRD "${p.title}"?`)) onDelete(p.id);
                   }}
-                  className="absolute right-2 top-2 flex size-7 items-center justify-center rounded-md opacity-0 transition-opacity hover:bg-destructive/10 group-focus-within:opacity-100 group-hover:opacity-100"
+                  className="absolute right-1.5 top-1/2 flex size-7 -translate-y-1/2 items-center justify-center rounded-md opacity-0 transition-opacity hover:bg-destructive/10 focus-visible:opacity-100 group-focus-within:opacity-100 group-hover:opacity-100"
                   aria-label={`Hapus ${p.title}`}
                 >
                   <Trash2 className="h-3.5 w-3.5 text-destructive" />
