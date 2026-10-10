@@ -744,14 +744,14 @@ export default function PlanPage() {
 
   return (
     <AuthGate>
-    <div className="flex flex-1 flex-col overflow-hidden lg:flex-row">
-      <div className="flex flex-col">
+    <div className="flex flex-1 flex-col overflow-hidden lg:h-[calc(100dvh-3.5rem)] lg:flex-none lg:flex-row">
+      <div className="flex min-h-0 flex-col">
         <PlanSidebar plans={plans} activeId={activeId} onSelect={loadPlan} onDelete={handleDelete} />
         <SyncIndicator status={sync.status} active={sync.active} />
       </div>
 
-      <div className="flex flex-1 flex-col gap-4 overflow-auto p-4 lg:flex-row lg:overflow-hidden lg:p-6">
-        <div className={"flex flex-col gap-3 " + (structure ? "lg:w-full" : "lg:w-1/3")}>
+      <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-auto p-4 lg:flex-row lg:overflow-hidden lg:p-6">
+        <div className={"flex min-h-0 flex-col gap-3 lg:overflow-y-auto " + (structure ? "lg:w-full" : "lg:w-1/3")}>
           <div>
             <h1 className="text-xl font-semibold tracking-tight">Jelaskan ide kamu</h1>
             <p className="mt-1 text-sm text-muted-foreground">
@@ -813,7 +813,7 @@ export default function PlanPage() {
             value={idea}
             onChange={(e) => setIdea(e.target.value)}
             placeholder={`mis. "${TEMPLATES[0].idea}"\n\nIde lain:\n- ${TEMPLATES[1].idea}\n- ${TEMPLATES[2].idea}`}
-            className="min-h-[200px] resize-none"
+            className="min-h-[160px] flex-1 resize-none [field-sizing:fixed]"
             disabled={!!clarify}
           />
           {!clarify && idea.trim() === "" && (

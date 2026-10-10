@@ -38,7 +38,7 @@ export function PlanSidebar({
   onDelete?: (id: string) => void;
 }) {
   return (
-    <div className="flex w-full shrink-0 flex-col border-b bg-muted/20 lg:w-64 lg:border-b-0 lg:border-r">
+    <div className="flex w-full shrink-0 flex-col border-b bg-muted/20 lg:h-full lg:w-64 lg:border-b-0 lg:border-r">
       <div className="flex items-center justify-between border-b px-3 py-2.5">
         <span className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           <History className="h-3.5 w-3.5" />
