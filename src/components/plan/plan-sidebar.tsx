@@ -4,6 +4,17 @@ import { FileText, History, Trash2 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import type { PlanRecord } from "@/lib/storage";
+import {
+  AlertDialog,
+  AlertDialogTrigger,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogAction,
+  AlertDialogCancel,
+} from "@/components/ui/alert-dialog";
 
 function timeAgo(ts: number): string {
   const diffMs = Date.now() - ts;
@@ -72,16 +83,32 @@ export function PlanSidebar({
                 </span>
               </button>
               {onDelete && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (window.confirm(`Hapus PRD "${p.title}"?`)) onDelete(p.id);
-                  }}
-                  className="absolute right-1.5 top-1/2 flex size-7 -translate-y-1/2 items-center justify-center rounded-md opacity-0 transition-opacity hover:bg-destructive/10 focus-visible:opacity-100 group-focus-within:opacity-100 group-hover:opacity-100"
-                  aria-label={`Hapus ${p.title}`}
-                >
-                  <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                </button>
+                <AlertDialog>
+                  <AlertDialogTrigger
+                    render={
+                      <button
+                        onClick={(e) => e.stopPropagation()}
+                        className="absolute right-1.5 top-1/2 flex size-7 -translate-y-1/2 items-center justify-center rounded-md opacity-0 transition-opacity hover:bg-destructive/10 focus-visible:opacity-100 group-focus-within:opacity-100 group-hover:opacity-100"
+                        aria-label={`Hapus ${p.title}`}
+                      >
+                        <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                      </button>
+                    }
+                  />
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Hapus PRD ini?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        &ldquo;{p.title}&rdquo; akan dihapus permanen, termasuk semua versi dan
+                        riwayatnya. Tindakan ini tidak bisa dibatalkan.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Batal</AlertDialogCancel>
+                      <AlertDialogAction onClick={() => onDelete(p.id)}>Hapus</AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               )}
             </div>
           ))}
