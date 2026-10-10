@@ -22,7 +22,7 @@ function ToastViewport() {
     <ToastPrimitive.Portal>
       <ToastPrimitive.Viewport
         data-slot="toast-viewport"
-        className="fixed bottom-4 left-1/2 z-[60] flex w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 flex-col gap-2 outline-none"
+        className="fixed top-4 left-1/2 z-[60] flex w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 flex-col gap-2 outline-none"
       >
         {toasts.map((toast) => (
           <ToastItem key={toast.id} toast={toast} />
@@ -36,9 +36,10 @@ function ToastItem({ toast }: { toast: ToastPrimitive.Root.ToastObject }) {
   return (
     <ToastPrimitive.Root
       toast={toast}
+      swipeDirection={["up", "left", "right"]}
       data-slot="toast"
       className={cn(
-        "flex items-start gap-3 rounded-lg border border-border bg-popover px-4 py-3 text-sm text-popover-foreground shadow-lg outline-none transition duration-200 data-ending-style:opacity-0 data-starting-style:opacity-0"
+        "flex w-full items-start gap-3 rounded-lg border border-border bg-popover px-4 py-3 text-sm text-popover-foreground shadow-lg outline-none transition-[opacity,transform] duration-200 ease-out translate-y-0 opacity-100 data-starting-style:-translate-y-4 data-starting-style:opacity-0 data-ending-style:-translate-y-4 data-ending-style:opacity-0"
       )}
     >
       <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" aria-hidden="true" />
