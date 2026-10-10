@@ -264,7 +264,7 @@ export function completeTask(idOrPrefix, taskId, done = true) {
     const { id, rest } = m;
     const lineId = (id || "").toUpperCase();
     // Match on the task id (T012) or on an id prefix when the file has none.
-    if (lineId !== wanted && !rest.trim().toUpperCase().startsWith(wanted)) return line;
+    if (lineId !== wanted) return line;
     hit = true;
     // Rewrite as the canonical checkbox shape, so ticking a bare-id task
     // upgrades it in place instead of appending a second representation.
@@ -276,6 +276,7 @@ export function completeTask(idOrPrefix, taskId, done = true) {
   record.docs.tasks = updated.join("\n");
   record.updatedAt = Date.now();
   fs.writeFileSync(fileFor(record.id), JSON.stringify(record, null, 2), "utf8");
+  appendExecutionLog(record.id, { action: done ? "complete" : "reopen", taskId: wanted });
   return { id: record.id, taskId: wanted, done, tasks: parseTasks(record.docs.tasks) };
 }
 
@@ -379,4 +380,120 @@ export function nextTask(idOrPrefix) {
     next: pending[0] || null,
     remaining: pending.slice(0, 10),
   };
+}
+
+export function syncTasksFromMarkdown(idOrPrefix, markdown) {
+  const record = resolveBlueprint(idOrPrefix);
+  if (!record) throw new Error(`blueprint not found: ${idOrPrefix ?? "latest"}`);
+  if (typeof markdown !== "string" || !markdown.trim()) throw new Error("markdown is required");
+  record.docs = { ...(record.docs || {}), tasks: markdown };
+  record.updatedAt = Date.now();
+  fs.writeFileSync(fileFor(record.id), JSON.stringify(record, null, 2), "utf8");
+  return { id: record.id, tasks: parseTasks(markdown), summary: summarizeTasks(markdown) };
+}
+
+export function searchTasks(query = "", blueprintId) {
+  const q = String(query).trim().toLowerCase();
+  const records = blueprintId
+    ? [resolveBlueprint(blueprintId)].filter(Boolean)
+    : listBlueprints().map((b) => readBlueprint(b.id)).filter(Boolean);
+  const results = [];
+  for (const record of records) {
+    for (const task of parseTasks(record.docs?.tasks || "")) {
+      if (q && !`${task.id} ${task.phase} ${task.text}`.toLowerCase().includes(q)) continue;
+      results.push({
+        id: task.id,
+        done: task.done,
+        phase: task.phase,
+        text: task.text,
+        blueprintId: record.id,
+        blueprintTitle: record.title,
+      });
+    }
+  }
+  return results;
+}
+
+export function buildTaskPrompt(record, task) {
+  const docs = record.docs || {};
+  const parts = [
+    `# Task ${task.id}: ${task.text}`,
+    "",
+    `Blueprint: ${record.title} (${record.id})`,
+  ];
+  if (task.phase) parts.push(`Phase: ${task.phase}`);
+  parts.push(
+    "",
+    "Kerjakan HANYA task ini. Implementasi nyata, tanpa placeholder atau TODO palsu.",
+    "Verifikasi dengan perintah nyata (build/test/typecheck), lalu tandai selesai dengan tool rancang_task_complete.",
+    ""
+  );
+  if (docs.spec) parts.push("## SPEC", "", docs.spec.trim(), "");
+  if (docs.plan) parts.push("## PLAN", "", docs.plan.trim(), "");
+  return parts.join("\n");
+}
+
+function versionsDirFor(id) {
+  return path.join(rancangHome(), "versions", String(id).replace(/[^A-Za-z0-9_-]/g, ""));
+}
+
+function logFileFor(id) {
+  return path.join(rancangHome(), "logs", `${String(id).replace(/[^A-Za-z0-9_-]/g, "")}.jsonl`);
+}
+
+export function saveBlueprintVersion(idOrPrefix, note = "") {
+  const record = resolveBlueprint(idOrPrefix);
+  if (!record) throw new Error(`blueprint not found: ${idOrPrefix ?? "latest"}`);
+  const dir = versionsDirFor(record.id);
+  fs.mkdirSync(dir, { recursive: true });
+  const timestamp = Date.now();
+  const versionId = `v${timestamp}`;
+  const snapshot = {
+    versionId,
+    blueprintId: record.id,
+    timestamp,
+    note: String(note || "").slice(0, 500),
+    docs: record.docs,
+    summary: summarizeTasks(record.docs?.tasks || ""),
+  };
+  fs.writeFileSync(path.join(dir, `${versionId}.json`), JSON.stringify(snapshot, null, 2), "utf8");
+  return { versionId, blueprintId: record.id, totalVersions: listBlueprintVersions(record.id).length };
+}
+
+export function listBlueprintVersions(idOrPrefix) {
+  const record = resolveBlueprint(idOrPrefix);
+  if (!record) return [];
+  const dir = versionsDirFor(record.id);
+  if (!fs.existsSync(dir)) return [];
+  const out = [];
+  for (const f of fs.readdirSync(dir).filter((n) => n.endsWith(".json"))) {
+    try {
+      const s = JSON.parse(fs.readFileSync(path.join(dir, f), "utf8"));
+      out.push({ id: s.versionId, timestamp: s.timestamp, note: s.note, summary: s.summary });
+    } catch {
+      // Skip unreadable snapshots.
+    }
+  }
+  return out.sort((a, b) => b.timestamp - a.timestamp);
+}
+
+export function appendExecutionLog(id, entry) {
+  const file = logFileFor(id);
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.appendFileSync(file, JSON.stringify({ ...entry, timestamp: Date.now() }) + "\n", "utf8");
+}
+
+export function getExecutionLogs(idOrPrefix, limit = 100) {
+  const record = resolveBlueprint(idOrPrefix);
+  if (!record) return [];
+  try {
+    return fs
+      .readFileSync(logFileFor(record.id), "utf8")
+      .split("\n")
+      .filter(Boolean)
+      .slice(-limit)
+      .map((line) => JSON.parse(line));
+  } catch {
+    return [];
+  }
 }

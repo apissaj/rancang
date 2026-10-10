@@ -8,6 +8,7 @@
 
 export const ANTI_SLOP_PRD_RULES = `
 Anti-Slop & Craftsmanship Standards (Strictly enforced):
+- BAHASA: Tulis seluruh keluaran dalam Bahasa Indonesia yang natural dan profesional. Istilah teknis yang lazim (API, endpoint, JWT, framework, dsb.) boleh tetap dalam bahasa Inggris. Jangan mencampur kalimat Inggris di tengah prosa Indonesia.
 - NO Empty AI Vocabulary: Do NOT use buzzwords like "seamless", "cutting-edge", "revolutionary", "game-changer", "delve", "elevate", "unlock", "empower", "robust", "next-level", "transformative", "landscape", "testament", "ushering in a new era". State plain facts directly (e.g. "Work with your team in one shared space" instead of "Unlock the power of seamless collaboration").
 - NO Fabricated Claims or Metrics: Do NOT invent unsourced statistics ("99.9% uptime", "trusted by 10k users", "SOC-2 compliant") unless explicitly provided by the user. If data is unknown, state requirements plainly without fake social proof or fictional metrics.
 - NO Em Dash (—) Overuse: Do not use em dashes (—) in narrative text; use commas, periods, colons, or parentheses instead.

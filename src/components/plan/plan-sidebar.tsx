@@ -40,42 +40,47 @@ export function PlanSidebar({
       <ScrollArea className="h-40 lg:h-[calc(100%-2.75rem)]">
         <div className="flex flex-col gap-1 px-2 py-2">
           {plans.map((p) => (
-            <button
+            <div
               key={p.id}
-              onClick={() => onSelect(p.id)}
               className={cn(
-                "group flex w-full flex-col gap-0.5 rounded-md border border-transparent px-2.5 py-2 text-left outline-none transition-colors hover:border-border hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring/50",
+                "group relative flex flex-col",
+                "rounded-md border border-transparent transition-colors hover:border-border hover:bg-muted/60",
                 p.id === activeId && "border-border bg-muted"
               )}
-              title={p.title}
             >
-              <span className="flex items-center gap-1.5 truncate text-[13px] font-medium text-foreground">
-                              <FileText className="h-3 w-3 shrink-0 text-muted-foreground" />
-                              {p.title}
-                            </span>
-                            <span className="truncate pl-[18px] text-[11px] text-muted-foreground">
-                              {p.markdown ? (
-                                <>
-                                  {timeAgo(p.createdAt)}
-                                  {p.versions.length > 1 && ` · v${p.versions.length}`}
-                                </>
-                              ) : (
-                                <span className="italic text-muted-foreground/60">draft — belum selesai</span>
-                              )}
-                            </span>
-                            {onDelete && (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  if (window.confirm(`Hapus PRD "${p.title}"?`)) onDelete(p.id);
-                                }}
-                                className="absolute right-2 top-2 flex size-7 items-center justify-center rounded-md opacity-0 transition-opacity hover:bg-destructive/10 group-focus-within:opacity-100 group-hover:opacity-100"
-                                aria-label={`Hapus ${p.title}`}
-                              >
-                                <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                              </button>
-                            )}
-            </button>
+              <button
+                onClick={() => onSelect(p.id)}
+                className="w-full rounded-md px-2.5 py-2 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+                title={p.title}
+              >
+                <span className="flex items-center gap-1.5 truncate text-[13px] font-medium text-foreground">
+                  <FileText className="h-3 w-3 shrink-0 text-muted-foreground" />
+                  {p.title}
+                </span>
+                <span className="truncate pl-[18px] text-[11px] text-muted-foreground">
+                  {p.markdown ? (
+                    <>
+                      {timeAgo(p.createdAt)}
+                      {p.versions.length > 1 && ` · v${p.versions.length}`}
+                    </>
+                  ) : (
+                    <span className="italic text-muted-foreground/60">draft — belum selesai</span>
+                  )}
+                </span>
+              </button>
+              {onDelete && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (window.confirm(`Hapus PRD "${p.title}"?`)) onDelete(p.id);
+                  }}
+                  className="absolute right-2 top-2 flex size-7 items-center justify-center rounded-md opacity-0 transition-opacity hover:bg-destructive/10 group-focus-within:opacity-100 group-hover:opacity-100"
+                  aria-label={`Hapus ${p.title}`}
+                >
+                  <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                </button>
+              )}
+            </div>
           ))}
           {plans.length === 0 && (
             <div className="flex flex-col items-center gap-2 px-3 py-8 text-center">

@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { nanoid } from "nanoid";
-import { Check, Copy, Download, FileText, Loader2, Bot, ChevronDown, ChevronRight, Bookmark, Zap, MessageSquare } from "lucide-react";
+import { Check, Copy, Download, FileText, Loader2, Bot, ChevronDown, ChevronRight, Bookmark, Zap, MessageSquare, Palette, FolderOpen } from "lucide-react";
 import JSZip from "jszip";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,6 +22,7 @@ import { PlanSidebar } from "@/components/plan/plan-sidebar";
 import FeatureMap from "@/components/plan/feature-map";
 import { ClarifyQuestions, type QuestionAnswers } from "@/components/plan/clarify-questions";
 import { PlanChat } from "@/components/plan/plan-chat";
+import { ScaffoldDialog } from "@/components/scaffold-dialog";
 import { planStore, type PlanRecord, type PlanVersion, type BlueprintChatMessage } from "@/lib/storage";
 import type { ClarifyResponse, StructureResponse } from "@/lib/clarify-types";
 import { useSync } from "@/lib/use-sync";
@@ -47,6 +49,8 @@ type CompareColumn = {
   copied?: boolean;
 };
 
+type DocStatus = "pending" | "writing" | "done";
+
 export default function PlanPage() {
   const [idea, setIdea] = useState("");
   const [markdown, setMarkdown] = useState("");
@@ -69,6 +73,7 @@ export default function PlanPage() {
   const [compareMode, setCompareMode] = useState(false);
   const [compareModels, setCompareModels] = useState<string[]>([]);
   const [compareColumns, setCompareColumns] = useState<CompareColumn[] | null>(null);
+  const [docStatus, setDocStatus] = useState<Record<string, DocStatus>>({});
   const [editing, setEditing] = useState(false);
   const [editDraft, setEditDraft] = useState("");
   const [aiInstruction, setAiInstruction] = useState("");
@@ -105,7 +110,8 @@ export default function PlanPage() {
   // so a different identity never sees the previous identity's plans. Also covers
   // first mount (storageVersion starts at 0).
   useEffect(() => {
-    setPlans(planStore.all());
+    const all = planStore.all();
+    setPlans(all);
     setActiveId(null);
     setMcpBlueprintId(null);
     setMcpCopied(false);
@@ -115,6 +121,44 @@ export default function PlanPage() {
     setError(null);
     setClarify(null);
     setCompareColumns(null);
+
+    // Auto-restore / import blueprint if ?mcpId= query param is present
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const targetMcpId = params.get("mcpId");
+      if (targetMcpId) {
+        const existing = all.find((p) => p.mcpId === targetMcpId);
+        if (existing) {
+          loadPlan(existing.id);
+        } else {
+          // Fetch from server disk
+          fetch(`/api/mcp/blueprint?id=${encodeURIComponent(targetMcpId)}`)
+            .then((r) => r.json())
+            .then((data) => {
+              if (data?.blueprint) {
+                const b = data.blueprint;
+                const newRecord: PlanRecord = {
+                  id: nanoid(),
+                  title: b.title || "Blueprint " + targetMcpId,
+                  idea: b.idea || b.title || "",
+                  markdown: b.docs?.prd || Object.values(b.docs || {})[0] || "",
+                  createdAt: b.createdAt || Date.now(),
+                  versions: [],
+                  docs: b.docs || {},
+                  mcpId: targetMcpId,
+                };
+                planStore.save(newRecord);
+                const updated = planStore.all();
+                setPlans(updated);
+                loadPlan(newRecord.id);
+              }
+            })
+            .catch((err) => {
+              console.error("[plan] failed to load blueprint by mcpId:", err);
+            });
+        }
+      }
+    }
   }, [storageVersion]);
 
   // Refresh the list after Firestore merge lands in localStorage.
@@ -170,17 +214,27 @@ export default function PlanPage() {
     const DOC_MARKER = /<!-- DOC:(\w+) -->/g;
     // Emit content from `s` into `collected`, splitting on markers. Returns the
     // text AFTER the last marker (may contain a marker split across chunks).
+    const DOC_ORDER = ["prd", "spec", "plan", "tasks"] as const;
+    const setStatusForDoc = (d: string) => {
+      const i = DOC_ORDER.indexOf(d as (typeof DOC_ORDER)[number]);
+      const next: Record<string, DocStatus> = {};
+      DOC_ORDER.forEach((name, idx) => {
+        next[name] = idx < i ? "done" : idx === i ? "writing" : "pending";
+      });
+      setDocStatus(next);
+      setActiveDoc(d);
+    };
+    setStatusForDoc("prd");
     const processBuffer = (s: string): string => {
       DOC_MARKER.lastIndex = 0;
       let pos = 0;
       let m: RegExpExecArray | null;
-      let lastMarkerEnd = -1;
       while ((m = DOC_MARKER.exec(s)) !== null) {
         const before = s.slice(pos, m.index);
         if (before) collected[currentDoc] += before;
         currentDoc = m[1];
+        setStatusForDoc(currentDoc);
         pos = m.index + m[0].length;
-        lastMarkerEnd = m.index + m[0].length;
       }
       return s.slice(pos);
     };
@@ -199,6 +253,7 @@ export default function PlanPage() {
     // whose marker never arrived).
     if (buffer.trim()) collected[currentDoc] += buffer;
     setDocs({ ...collected });
+    setDocStatus({ prd: "done", spec: "done", plan: "done", tasks: "done" });
     partialRef.current = { markdown: collected.prd, docs: { ...collected } };
     return collected;
   };
@@ -266,6 +321,7 @@ export default function PlanPage() {
     setLoading(true);
     setCompareColumns(null);
     setDocs({});
+    setDocStatus({});
     try {
       let full: string;
       let collected: Record<string, string> | undefined;
@@ -352,7 +408,9 @@ export default function PlanPage() {
       await navigator.clipboard.writeText(
         `Gunakan MCP server "rancang". Ambil execution prompt blueprint ${mcpBlueprintId} ` +
           `(tool rancang_execution_prompt, agent: "Claude Code", working_dir: <path>) lalu kerjakan task-nya ` +
-          `satu per satu: rancang_next_task → implementasi + verifikasi → rancang_task_complete.`
+          `satu per satu: rancang_next_task → implementasi + verifikasi → rancang_task_complete. ` +
+          `Blueprint ini berisi PRD, spec, plan, tasks, DAN DESIGN.md + wireframe — ikuti semuanya, ` +
+          `terutama DESIGN.md untuk implementasi UI/UX.`
       );
       setMcpCopied(true);
       setTimeout(() => setMcpCopied(false), 1500);
@@ -439,6 +497,7 @@ export default function PlanPage() {
     setMarkdown(plan.markdown);
     setDocs(plan.docs ?? {});
     setActiveDoc(plan.docs?.prd ? "prd" : "prd");
+    setDocStatus({});
     setError(null);
     setClarify(null);
     setCompareColumns(null);
@@ -741,6 +800,9 @@ export default function PlanPage() {
           )}
 
           <Textarea
+            id="idea-input"
+            name="idea"
+            aria-label="Ide aplikasi atau fitur"
             value={idea}
             onChange={(e) => setIdea(e.target.value)}
             placeholder={`mis. "${TEMPLATES[0].idea}"\n\nIde lain:\n- ${TEMPLATES[1].idea}\n- ${TEMPLATES[2].idea}`}
@@ -871,6 +933,53 @@ export default function PlanPage() {
           </div>
         ) : (
           <div className="flex flex-1 flex-col overflow-hidden rounded-xl border shadow-sm lg:w-2/3">
+            {loading && multiMode && !compareColumns && Object.keys(docStatus).length > 0 && (
+              <div className="border-b bg-muted/10 px-4 py-3">
+                <div className="mb-2 flex items-center justify-between text-xs">
+                  <span className="font-medium text-foreground">
+                    Membuat dokumen ({Object.values(docStatus).filter((s) => s === "done").length}/{DOC_NAMES.length})
+                  </span>
+                  <span className="text-muted-foreground">
+                    {Math.round((Object.values(docStatus).filter((s) => s === "done").length / DOC_NAMES.length) * 100)}%
+                  </span>
+                </div>
+                <div
+                  role="progressbar"
+                  aria-label="Progres pembuatan dokumen"
+                  aria-valuemin={0}
+                  aria-valuemax={DOC_NAMES.length}
+                  aria-valuenow={Object.values(docStatus).filter((s) => s === "done").length}
+                  className="flex h-1.5 w-full gap-1 overflow-hidden rounded-full"
+                >
+                  {DOC_NAMES.map((doc) => {
+                    const s = docStatus[doc] ?? "pending";
+                    return (
+                      <div
+                        key={doc}
+                        className={`h-full flex-1 rounded-full transition-colors duration-500 ${
+                          s === "done" ? "bg-emerald-500" : s === "writing" ? "animate-pulse bg-foreground" : "bg-border"
+                        }`}
+                      />
+                    );
+                  })}
+                </div>
+                <div className="mt-2 flex flex-wrap gap-3 text-[11px] text-muted-foreground">
+                  {DOC_NAMES.map((doc) => {
+                    const s = docStatus[doc] ?? "pending";
+                    return (
+                      <span key={doc} className="flex items-center gap-1">
+                        <span
+                          className={`h-1.5 w-1.5 rounded-full ${
+                            s === "done" ? "bg-emerald-500" : s === "writing" ? "animate-pulse bg-foreground" : "bg-border"
+                          }`}
+                        />
+                        {doc}.md · {s === "done" ? "selesai" : s === "writing" ? "sedang ditulis" : "menunggu"}
+                      </span>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
             <div className="flex flex-wrap items-center justify-between gap-2 border-b bg-muted/20 px-4 py-2">
               <span className="flex items-center gap-1.5 text-sm font-medium">
                 <FileText className="h-4 w-4 text-muted-foreground" />
@@ -927,11 +1036,31 @@ export default function PlanPage() {
                     {mcpCopied ? "Prompt tersalin" : "Salin Prompt MCP"}
                   </Button>
                 )}
+                {mcpBlueprintId && (
+                  <ScaffoldDialog
+                    blueprintId={mcpBlueprintId}
+                    blueprintTitle={activePlan?.title ?? "Blueprint"}
+                  />
+                )}
+                {activePlan && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    nativeButton={false} render={<Link href={`/design?planId=${activePlan.id}`} />}
+                    title="Buat desain visual dan prototype wireframe dari PRD ini"
+                  >
+                    <Palette className="h-3.5 w-3.5" />
+                    Buat Desain
+                  </Button>
+                )}
               </div>
             </div>
             {!editing && (currentDocContent || markdown) && !loading && activePlan && (
               <div className="flex flex-wrap items-center gap-2 border-b bg-muted/30 px-4 py-2">
                 <input
+                  id="ai-instruction-input"
+                  name="ai-instruction"
+                  aria-label="Instruksi perubahan dokumen dengan AI"
                   value={aiInstruction}
                   onChange={(e) => setAiInstruction(e.target.value)}
                   placeholder="Ubah bagian X jadi... / Tambah section tentang... / Buat goals lebih spesifik"

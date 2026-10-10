@@ -50,7 +50,7 @@ const MAX_BODY_BYTES = 1_000_000; // 1 MB
 
 function readBody(req) {
   return new Promise((resolve, reject) => {
-    let data = "";
+    const chunks = [];
     let bytes = 0;
     req.on("data", (chunk) => {
       bytes += chunk.length;
@@ -59,9 +59,10 @@ function readBody(req) {
         reject(new Error("Payload too large (max 1 MB)"));
         return;
       }
-      data += chunk;
+      chunks.push(chunk);
     });
     req.on("end", () => {
+      const data = Buffer.concat(chunks).toString("utf8");
       if (!data) return resolve(undefined);
       try {
         resolve(JSON.parse(data));

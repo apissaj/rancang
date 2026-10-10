@@ -12,9 +12,10 @@ import { Button } from "@/components/ui/button";
 const links = [
   { href: "/plan", label: "Rencana" },
   { href: "/design", label: "Desain" },
+  { href: "/projects", label: "Proyek" },
 ];
 
-const APP_PATHS = ["/plan", "/design"];
+const APP_PATHS = ["/plan", "/design", "/projects"];
 
 // Desktop navigation links (shared between variants)
 function DesktopLinks({ active }: { active: (href: string) => boolean }) {
@@ -29,7 +30,7 @@ function DesktopLinks({ active }: { active: (href: string) => boolean }) {
             "px-2.5 font-medium",
             active(link.href) && "bg-muted text-foreground"
           )}
-          render={<Link href={link.href}>{link.label}</Link>}
+          nativeButton={false} render={<Link href={link.href}>{link.label}</Link>}
         />
       ))}
     </nav>

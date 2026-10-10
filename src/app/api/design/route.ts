@@ -98,7 +98,7 @@ export async function POST(req: Request) {
   const blocked = limiter.check(req);
   if (blocked) return blocked;
 
-  const { idea, planMarkdown, vibe, platform, pwa, model } = (await req.json()) as {
+  let body: {
     idea: string;
     planMarkdown?: string;
     vibe?: string;
@@ -106,6 +106,12 @@ export async function POST(req: Request) {
     pwa: boolean;
     model?: string;
   };
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Body JSON tidak valid" }, { status: 400 });
+  }
+  const { idea, planMarkdown, vibe, platform, pwa, model } = body;
 
   if (!idea || !idea.trim()) {
     return NextResponse.json({ error: "idea is required" }, { status: 400 });

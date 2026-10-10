@@ -42,7 +42,13 @@ export async function POST(req: Request) {
   const blocked = limiter.check(req);
   if (blocked) return blocked;
 
-  const { idea, answers, model } = (await req.json()) as { idea: string; answers?: Answer[]; model?: string };
+  let body: { idea: string; answers?: Answer[]; model?: string };
+  try {
+    body = (await req.json()) as { idea: string; answers?: Answer[]; model?: string };
+  } catch {
+    return new Response("Body JSON tidak valid", { status: 400 });
+  }
+  const { idea, answers, model } = body;
 
   if (!idea || !idea.trim()) {
     return new Response("idea is required", { status: 400 });

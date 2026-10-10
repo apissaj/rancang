@@ -3,15 +3,21 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --port 3100",
     "build": "next build",
-    "start": "next start",
-    "lint": "eslint"
+    "start": "next start --port 3100",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src",
+    "cli": "node src/rancang-cli.mjs"
+  },
+  "bin": {
+    "rancang": "./src/rancang-cli.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",
     "@google-cloud/firestore": "^9.1.0",
     "class-variance-authority": "^0.7.1",
+    "chalk": "^4.1.2",
     "clsx": "^2.1.1",
     "firebase": "^12.17.1",
     "firebase-admin": "^14.2.0",

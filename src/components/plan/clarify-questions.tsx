@@ -50,7 +50,7 @@ export function ClarifyQuestions({
             <CardContent className="flex flex-col gap-2">
               {q.type === "single" ? (
                 <RadioGroup
-                  value={selected[0] ?? undefined}
+                  value={selected[0] ?? ""}
                   onValueChange={(value) => setSelected(q.id, [String(value)])}
                   className="gap-2"
                 >

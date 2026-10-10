@@ -34,6 +34,7 @@ Respond with ONLY valid JSON, no markdown code fences, no commentary, matching e
 the user can pick any number (checkboxes). Set "allowsNote": true on an option only when it
 represents an open-ended choice (e.g. "Other") that benefits from a free-text detail field.
 
+Bahasa: tulis seluruh teks (intro, question, label opsi) dalam Bahasa Indonesia yang natural.
 Anti-slop: keep questions concrete and grounded in the actual idea, not template cliches.
 Do NOT add a generic question like "Siapa target pengguna?" unless the idea genuinely
 needs it answered. Skip fluff; every question must change what the final PRD would say.

@@ -26,7 +26,7 @@ export default function CTASection() {
               dan tasks — siap dikerjakan coding agent apa pun. Gratis, tanpa akun.
             </p>
             <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-              <Button render={<Link href="/plan" />} className="h-12 px-8 text-base">
+              <Button nativeButton={false} render={<Link href="/plan" />} className="h-12 px-8 text-base">
                 Mulai rancang
                 <ArrowRight className="ml-2 size-4" />
               </Button>

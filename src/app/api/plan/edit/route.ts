@@ -25,13 +25,18 @@ export async function POST(req: Request) {
   const blocked = limiter.check(req);
   if (blocked) return blocked;
 
-  const body = (await req.json()) as {
+  let body: {
     markdown?: string;
     instruction?: string;
     docs?: BlueprintDocs;
     target?: string;
     model?: string;
   };
+  try {
+    body = await req.json();
+  } catch {
+    return new Response("Body JSON tidak valid", { status: 400 });
+  }
 
   const instruction: string = body.instruction ?? "";
   if (!instruction.trim()) {

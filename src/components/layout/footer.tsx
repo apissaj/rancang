@@ -8,6 +8,7 @@ const columns = [
     links: [
       { label: "Generator PRD", href: "/plan" },
       { label: "Generator Desain", href: "/design" },
+      { label: "Proyek & Task Tracker", href: "/projects" },
     ],
   },
   {

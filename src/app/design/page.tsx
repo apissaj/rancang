@@ -1,8 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { nanoid } from "nanoid";
-import { Check, Copy, Download, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
+import { Check, Copy, Download, Loader2, ChevronLeft, ChevronRight, FolderOpen } from "lucide-react";
+import { ScaffoldDialog } from "@/components/scaffold-dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -22,7 +24,52 @@ import { AuthGate } from "@/components/auth-gate";
 
 type Platform = "mobile" | "web" | "both";
 
+/**
+ * The blueprint-friendly design document published to the MCP bridge: the
+ * DESIGN.md token spec plus the wireframe screen/component tree, so a coding
+ * agent gets BOTH the visual system and the flows — not just prose.
+ */
+function buildDesignDoc(designMd: string, screens: Screen[]): string {
+  const parts: string[] = [];
+  parts.push(designMd.trim());
+  parts.push("");
+  parts.push("---");
+  parts.push("");
+  parts.push("## Wireframe: Screens & Flow");
+  parts.push("");
+  parts.push(
+    "Implement the screens below exactly: same names, same components, same navigation targets (the `-> screen-id` on a component is the tap destination)."
+  );
+  parts.push("");
+  if (screens.length === 0) {
+    parts.push("(no wireframe screens generated)");
+    return parts.join("\n");
+  }
+  for (const s of screens) {
+    parts.push(`### ${s.name} [${s.platform}]`);
+    parts.push(`- screen-id: \`${s.id}\``);
+    if (s.components.length === 0) {
+      parts.push("- (empty screen)");
+    } else {
+      parts.push("- components:");
+      for (const c of s.components) {
+        parts.push(`  - **${c.type}** "${c.label}"${c.onClick ? `  -> \`${c.onClick}\`` : ""}`);
+      }
+    }
+    parts.push("");
+  }
+  return parts.join("\n");
+}
+
 export default function DesignPage() {
+  return (
+    <Suspense fallback={null}>
+      <DesignPageInner />
+    </Suspense>
+  );
+}
+
+function DesignPageInner() {
   const [idea, setIdea] = useState("");
   const [sourcePlanId, setSourcePlanId] = useState<string>("none");
   const [vibe, setVibe] = useState("");
@@ -39,7 +86,14 @@ export default function DesignPage() {
   const [designMd, setDesignMd] = useState("");
   const [screens, setScreens] = useState<Screen[]>([]);
 
+  // MCP Blueprint integration: tracks the bridge blueprint id so the user can
+  // copy the ready-to-run execution prompt from the Design tab after generating.
+  const [mcpBlueprintId, setMcpBlueprintId] = useState<string | null>(null);
+  const [mcpCopied, setMcpCopied] = useState(false);
+  const mcpIds = useRef<Record<string, string>>({});
+
   const sync = useSync();
+  const searchParams = useSearchParams();
   const { storageVersion } = useAuth();
   const plans = planStore.all();
 
@@ -61,7 +115,16 @@ export default function DesignPage() {
   useEffect(() => {
     setDesigns(designStore.all());
     resetToSetup();
-  }, [storageVersion, resetToSetup]);
+    const planId = searchParams.get("planId");
+    if (planId) {
+      const plan = planStore.all().find((p) => p.id === planId);
+      if (plan) {
+        setSourcePlanId(planId);
+        setIdea(plan.idea || plan.title || "");
+        setShowSetup(true);
+      }
+    }
+  }, [storageVersion, resetToSetup, searchParams]);
 
   const deleteDesign = (id: string) => {
     const target = designStore.all().find((d) => d.id === id);
@@ -82,6 +145,7 @@ export default function DesignPage() {
     if (!idea.trim() || loading) return;
     setLoading(true);
     setError(null);
+    setMcpBlueprintId(null);
     const planMarkdown = sourcePlanId !== "none" ? plans.find((p) => p.id === sourcePlanId)?.markdown : undefined;
     try {
       const res = await fetch("/api/design", {
@@ -111,6 +175,7 @@ export default function DesignPage() {
       setScreens(record.screens);
       setShowSetup(false);
       sync.syncDesign(record);
+      void publishDesignMCP(record);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Terjadi kesalahan");
     } finally {
@@ -128,8 +193,81 @@ export default function DesignPage() {
     setPwa(d.pwa);
     setDesignMd(d.designMd);
     setScreens(d.screens);
+    const mcpId = d.mcpId ?? mcpIds.current[id] ?? null;
+    setMcpBlueprintId(mcpId);
+    setMcpCopied(false);
+    if (mcpId) mcpIds.current[id] = mcpId;
+    if (!mcpId && d.designMd) {
+      // Design exists but bridge id was lost (pre-persistence record) —
+      // re-publish silently so "Salin Prompt MCP" reappears.
+      void publishDesignMCP(d);
+    }
     setError(null);
     setShowSetup(false);
+  };
+
+  // Push the finished design into the MCP blueprint store. When the design came
+  // from a plan, it MERGES into that plan's blueprint (prd/spec/plan/tasks +
+  // design) so one execution prompt carries everything; otherwise it creates a
+  // design-only blueprint. Runs in the background — local UX must not block on
+  // the bridge being up.
+  const publishDesignMCP = async (record: DesignRecord) => {
+    try {
+      const designDoc = buildDesignDoc(record.designMd, record.screens);
+      let docs: Record<string, string> = { design: designDoc };
+      let blueprintId = record.mcpId || mcpIds.current[record.id] || undefined;
+
+      if (record.sourcePlanId) {
+        const plan = planStore.all().find((p) => p.id === record.sourcePlanId);
+        if (plan) {
+          docs = { ...(plan.docs ?? {}), design: designDoc };
+          blueprintId = blueprintId || plan.mcpId || mcpIds.current[plan.id] || undefined;
+        }
+      }
+
+      const res = await fetch("/api/mcp/blueprint", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: blueprintId,
+          title: record.title,
+          idea: record.sourceIdea,
+          model: "",
+          docs,
+        }),
+      });
+      if (!res.ok) return;
+      const data = (await res.json()) as { id: string };
+      mcpIds.current[record.id] = data.id;
+      if (record.sourcePlanId) mcpIds.current[record.sourcePlanId] = data.id;
+      setMcpBlueprintId(data.id);
+      if (data.id !== record.mcpId) {
+        const stored = designStore.all().find((d) => d.id === record.id);
+        if (stored) {
+          designStore.save({ ...stored, mcpId: data.id });
+          setDesigns(designStore.all());
+        }
+      }
+    } catch {
+      // Bridge down (port 3110) — blueprint stays local, no crash.
+    }
+  };
+
+  const copyMcpPrompt = async () => {
+    if (!mcpBlueprintId) return;
+    try {
+      await navigator.clipboard.writeText(
+        `Gunakan MCP server "rancang". Ambil execution prompt blueprint ${mcpBlueprintId} ` +
+          `(tool rancang_execution_prompt, agent: "Claude Code", working_dir: <path>) lalu kerjakan task-nya ` +
+          `satu per satu: rancang_next_task → implementasi + verifikasi → rancang_task_complete. ` +
+          `Blueprint ini berisi PRD, spec, plan, tasks, DAN DESIGN.md + wireframe — ikuti semuanya, ` +
+          `terutama DESIGN.md untuk implementasi UI/UX.`
+      );
+      setMcpCopied(true);
+      setTimeout(() => setMcpCopied(false), 1500);
+    } catch {
+      setError("Gagal menyalin prompt MCP.");
+    }
   };
 
   return (
@@ -178,6 +316,10 @@ export default function DesignPage() {
             activeDesign={activeDesign}
             setDesigns={setDesigns}
             sync={sync}
+            mcpBlueprintId={mcpBlueprintId}
+            mcpCopied={mcpCopied}
+            onCopyMcpPrompt={copyMcpPrompt}
+            onPublish={publishDesignMCP}
             onEditSetup={() => setShowSetup(true)}
           />
         )}
@@ -247,7 +389,20 @@ function SetupForm({
         {plans.length > 0 && (
           <div className="flex flex-col gap-1.5">
             <Label className="text-xs">Mulai dari PRD yang ada (opsional)</Label>
-            <Select value={sourcePlanId} onValueChange={(v) => v && setSourcePlanId(v)} items={planItems}>
+            <Select
+              value={sourcePlanId}
+              onValueChange={(v) => {
+                if (!v) return;
+                setSourcePlanId(v);
+                if (v !== "none") {
+                  const targetPlan = plans.find((p) => p.id === v);
+                  if (targetPlan && !idea.trim()) {
+                    setIdea(targetPlan.idea || targetPlan.title);
+                  }
+                }
+              }}
+              items={planItems}
+            >
               <SelectTrigger className="h-9 w-full">
                 <SelectValue />
               </SelectTrigger>
@@ -354,6 +509,10 @@ function ResultView({
   activeDesign,
   setDesigns,
   sync,
+  mcpBlueprintId,
+  mcpCopied,
+  onCopyMcpPrompt,
+  onPublish,
   onEditSetup,
 }: {
   idea: string;
@@ -367,6 +526,10 @@ function ResultView({
   activeDesign: DesignRecord | null;
   setDesigns: (v: DesignRecord[]) => void;
   sync: ReturnType<typeof useSync>;
+  mcpBlueprintId: string | null;
+  mcpCopied: boolean;
+  onCopyMcpPrompt: () => void;
+  onPublish: (record: DesignRecord) => Promise<void>;
   onEditSetup: () => void;
 }) {
   const platforms: ("mobile" | "web")[] = platform === "both" ? ["mobile", "web"] : [platform];
@@ -498,6 +661,7 @@ function ResultView({
     setDesignMd(updated.designMd);
     setScreens(updated.screens);
     setViewingVersionId(null);
+    void onPublish(updated);
     return updated;
   };
 
@@ -610,6 +774,7 @@ function ResultView({
         designStore.save(updated);
         sync.syncDesign(updated);
         setDesigns(designStore.all());
+        void onPublish(updated);
       }
     }
     setConfirmed(true);
@@ -642,6 +807,18 @@ function ResultView({
             {exportingZip ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
             {exportingZip ? "Mengompres..." : "Export aset hi-fi"}
           </Button>
+          {mcpBlueprintId && (
+            <Button variant="outline" size="sm" onClick={onCopyMcpPrompt} title="Salin prompt siap-tempel untuk agent coding kamu (berisi PRD + DESIGN)">
+              <Copy className="h-3.5 w-3.5" />
+              {mcpCopied ? "Prompt tersalin" : "Salin Prompt MCP"}
+            </Button>
+          )}
+          {mcpBlueprintId && (
+            <ScaffoldDialog
+              blueprintId={mcpBlueprintId}
+              blueprintTitle={activeDesign?.title ?? "Desain"}
+            />
+          )}
           <Button size="sm" onClick={produce}>
             {confirmed ? <Check className="h-3.5 w-3.5" /> : null}
             {confirmed ? "Ready — copy or download below" : "Produce DESIGN.md"}

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { ArrowRight, FileText, FileCode2, FileCog, Palette, Cpu } from "lucide-react";
+import { ArrowRight, FileText, FileCode2, FileCog, Palette, Cpu, FolderGit2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Reveal from "@/components/effects/reveal";
 import LandingBackground from "@/components/effects/landing-background";
@@ -26,22 +26,30 @@ const tools = [
     cta: "Buat PRD",
   },
   {
-    href: "/design",
-    icon: Palette,
-    title: "Generator Desain",
-    description:
-      "Ubah ide jadi spesifikasi token DESIGN.md plus prototipe wireframe yang bisa diklik, siap dijadikan mockup hi-fi.",
-    cta: "Buat desain",
-  },
-  {
-    href: "/plan",
-    icon: Cpu,
-    title: "Gateway Sendiri",
-    description:
-      "Semua jalan lewat gateway LLM milikmu. Tanpa akun, tanpa database, data tersimpan aman di browser.",
-    cta: "Mulai",
-  },
-];
+      href: "/design",
+      icon: Palette,
+      title: "Generator Desain",
+      description:
+        "Ubah ide jadi spesifikasi token DESIGN.md plus prototipe wireframe yang bisa diklik, siap dijadikan mockup hi-fi.",
+      cta: "Buat desain",
+    },
+    {
+      href: "/projects",
+      icon: FolderGit2,
+      title: "Proyek & Task Tracker",
+      description:
+        "Pantau progres pengerjaan blueprint oleh AI coding agent: task selesai, pending, dan aksi cepat buka PRD, desain, atau scaffold ke folder.",
+      cta: "Lihat proyek",
+    },
+    {
+      href: "/plan",
+      icon: Cpu,
+      title: "Gateway Sendiri",
+      description:
+        "Semua jalan lewat gateway LLM milikmu. Tanpa akun, tanpa database, data tersimpan aman di browser.",
+      cta: "Mulai",
+    },
+  ];
 
 export default function Home() {
   const [ready, setReady] = useState(false);
@@ -81,7 +89,7 @@ export default function Home() {
             </Reveal>
             <Reveal start={ready} delay={400}>
               <div className="mt-8 flex flex-wrap items-center gap-3">
-                <Button render={<Link href="/plan" />} className="h-11 px-6 text-base">
+                <Button nativeButton={false} render={<Link href="/plan" />} className="h-11 px-6 text-base">
                   Buat PRD
                 </Button>
               </div>
@@ -191,7 +199,7 @@ export default function Home() {
             <div className="grid gap-px overflow-hidden rounded-sm border border-border bg-border sm:grid-cols-2 lg:grid-cols-4">
               {tools.map(({ href, icon: Icon, title, description, cta }) => (
                 <Link
-                  key={href}
+                  key={title}
                   href={href}
                   className="group flex flex-col bg-background p-6 transition-colors hover:bg-muted/60"
                 >

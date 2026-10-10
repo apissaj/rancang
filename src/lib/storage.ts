@@ -185,6 +185,9 @@ export type DesignRecord = {
   screens: Screen[];
   createdAt: number;
   versions: DesignVersion[];
+  /** Blueprint id assigned by the MCP bridge — persisted so the design can
+      update the same blueprint (PRD + design) across reloads. */
+  mcpId?: string;
 };
 
 const DESIGN_LIMIT = 5;

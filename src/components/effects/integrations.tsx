@@ -33,7 +33,9 @@ export default function Integrations() {
               <img
                 src={src}
                 alt={`${name} logo`}
-                className="h-5 w-auto shrink-0"
+                width={20}
+                height={20}
+                className="h-5 w-5 shrink-0"
                 loading="lazy"
               />
               {name}

@@ -40,6 +40,11 @@ export async function streamChatCompletion(model: string, messages: ChatMessage[
 /**
  * Calls the chat completions endpoint non-streaming and returns the full
  * assistant text. For one-shot structured (e.g. JSON) responses.
+ *
+ * Timeout is 5 min (not 120s like the streaming variant) because non-streaming
+ * requests must wait for the WHOLE response before returning — the design
+ * route's prompt (SYSTEM_PROMPT + anti-slop rules + full planMarkdown) plus a
+ * multi-screen JSON answer routinely exceeds 2 minutes on TH/deepseek-v4-flash:free.
  */
 export async function chatCompletion(model: string, messages: ChatMessage[]): Promise<string> {
   const baseUrl = process.env.LLM_BASE_URL;
@@ -47,7 +52,7 @@ export async function chatCompletion(model: string, messages: ChatMessage[]): Pr
   if (!baseUrl) throw new Error("LLM_BASE_URL is not configured");
 
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 120_000);
+  const timeout = setTimeout(() => controller.abort(), 300_000);
 
   try {
     const res = await fetch(`${baseUrl.replace(/\/$/, "")}/chat/completions`, {

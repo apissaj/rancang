@@ -48,12 +48,18 @@ export async function POST(req: Request) {
   const blocked = limiter.check(req);
   if (blocked) return blocked;
 
-  const { screen, designMd, styleHint, designId } = (await req.json()) as {
+  let body: {
     screen: Screen;
     designMd: string;
     styleHint?: string;
     designId?: string;
   };
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Body JSON tidak valid" }, { status: 400 });
+  }
+  const { screen, designMd, styleHint, designId } = body;
 
   if (!screen || !designMd || !designId) {
     return NextResponse.json({ error: "screen, designMd and designId are required" }, { status: 400 });
@@ -66,6 +72,10 @@ export async function POST(req: Request) {
     return NextResponse.json({ imageUrl });
   } catch (err) {
     console.error("[design/image] generation failed:", err);
-    return NextResponse.json({ error: "Gagal membuat gambar desain" }, { status: 502 });
+    const msg =
+      err instanceof Error && /not configured/i.test(err.message)
+        ? "Image generation belum dikonfigurasi — tambahkan IMAGE_GEN_BASE_URL & IMAGE_GEN_MODEL di .env dulu"
+        : "Gagal membuat gambar desain";
+    return NextResponse.json({ error: msg }, { status: 502 });
   }
 }
