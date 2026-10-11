@@ -705,20 +705,18 @@ export default function PlanPage() {
           <div className="flex h-[2.625rem] shrink-0 items-center border-b">
             <h1 className="text-xl font-semibold tracking-tight">Jelaskan ide kamu</h1>
           </div>
-          <p className="text-sm text-muted-foreground">
+          <p className="mt-3 text-sm text-muted-foreground">
             Dapatkan PRD terstruktur dengan tujuan, kebutuhan, dan rincian task langkah demi langkah.
           </p>
 
           <div className="flex flex-wrap items-center gap-3 rounded-lg border bg-background/60 p-2.5">
             <div className="flex items-center gap-2">
               <Switch id="compare-mode" checked={compareMode} onCheckedChange={setCompareMode} />
-              <Label htmlFor="compare-mode" className="text-sm">
-                              Bandingkan model
-                            </Label>
+              <Label htmlFor="compare-mode" className="text-sm">Bandingkan model</Label>
             </div>
             {!compareMode ? (
               <Select value={model} onValueChange={(v) => v && setModel(v)}>
-                <SelectTrigger className="h-8 w-48">
+                <SelectTrigger className="h-8 w-40 min-w-0 flex-1">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -822,11 +820,11 @@ export default function PlanPage() {
         </div>
 
         {compareColumns ? (
-          <div className="flex flex-1 flex-col overflow-hidden rounded-xl border shadow-sm lg:w-2/3">
-            <div className="grid flex-1 grid-cols-1 divide-y overflow-auto sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-3">
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border bg-card shadow-[0_8px_30px_rgba(0,0,0,0.12)] lg:w-2/3">
+            <div className="grid min-h-0 flex-1 grid-cols-1 divide-y overflow-auto sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-3">
               {compareColumns.map((col) => (
                 <div key={col.model} className="flex min-h-[300px] flex-col overflow-hidden">
-                  <div className="flex items-center justify-between border-b bg-muted/50 px-3 py-2">
+                  <div className="flex h-[2.625rem] shrink-0 items-center justify-between border-b bg-muted/50 px-3">
                     <span className="text-xs font-semibold">{col.model}</span>
                     <div className="flex gap-1">
                       <Button
