@@ -315,13 +315,19 @@ export default function PlanPage() {
 
   const copyMcpPrompt = async () => {
     if (!mcpBlueprintId) return;
+    const hasDesign = !!docs.design?.trim();
+    const mcpDocTail = hasDesign
+      ? `Blueprint ini berisi PRD, spec, plan, tasks, dan DESIGN.md + wireframe — ikuti semuanya, ` +
+        `terutama DESIGN.md untuk implementasi UI/UX.`
+      : `Blueprint ini berisi PRD, spec, plan, tasks. ` +
+        `(DESIGN.md akan menyusul jika kamu membuat desain dari PRD ini.) ` +
+        `Ikuti blueprint ini saat mengimplementasi, sesuai urutan tugas.`;
     try {
       await navigator.clipboard.writeText(
         `Gunakan MCP server "rancang". Ambil execution prompt blueprint ${mcpBlueprintId} ` +
           `(tool rancang_execution_prompt, agent: "Claude Code", working_dir: <path>) lalu kerjakan task-nya ` +
           `satu per satu: rancang_next_task → implementasi + verifikasi → rancang_task_complete. ` +
-          `Blueprint ini berisi PRD, spec, plan, tasks, DAN DESIGN.md + wireframe — ikuti semuanya, ` +
-          `terutama DESIGN.md untuk implementasi UI/UX.`
+          mcpDocTail
       );
       setMcpCopied(true);
       setTimeout(() => setMcpCopied(false), 1500);

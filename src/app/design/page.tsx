@@ -260,13 +260,17 @@ function DesignPageInner() {
 
   const copyMcpPrompt = async () => {
     if (!mcpBlueprintId) return;
+    const fromPlan = !!activeDesign?.sourcePlanId;
+    const mcpDocTail = fromPlan
+      ? `Blueprint ini berisi PRD, spec, plan, tasks, dan DESIGN.md + wireframe — ikuti semuanya, ` +
+        `terutama DESIGN.md untuk implementasi UI/UX.`
+      : `Blueprint ini berisi DESIGN.md + wireframe — ikuti desain dan wireframe ini untuk implementasi UI/UX.`;
     try {
       await navigator.clipboard.writeText(
         `Gunakan MCP server "rancang". Ambil execution prompt blueprint ${mcpBlueprintId} ` +
           `(tool rancang_execution_prompt, agent: "Claude Code", working_dir: <path>) lalu kerjakan task-nya ` +
           `satu per satu: rancang_next_task → implementasi + verifikasi → rancang_task_complete. ` +
-          `Blueprint ini berisi PRD, spec, plan, tasks, DAN DESIGN.md + wireframe — ikuti semuanya, ` +
-          `terutama DESIGN.md untuk implementasi UI/UX.`
+          mcpDocTail
       );
       setMcpCopied(true);
       setTimeout(() => setMcpCopied(false), 1500);

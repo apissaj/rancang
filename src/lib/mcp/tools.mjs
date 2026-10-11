@@ -114,7 +114,7 @@ export const TOOLS = [
     name: "rancang_list_blueprints",
     title: "List Rancang blueprints",
     description:
-      "List every finished Rancang blueprint (PRD, spec, plan, tasks) available on this machine, newest first. Use this first to find the blueprint you are about to implement.",
+      "List every finished Rancang blueprint (PRD, spec, plan, tasks, design) available on this machine, newest first. Use this first to find the blueprint you are about to implement.",
     inputSchema: { type: "object", properties: {}, additionalProperties: false },
     handler: () => {
       const items = listBlueprints().map((b) => ({
@@ -140,7 +140,7 @@ export const TOOLS = [
     name: "rancang_read_blueprint",
     title: "Read a Rancang blueprint",
     description:
-      "Read the documents of a blueprint. Omit `docs` to get all four. Prefer reading `spec` and `tasks` first — spec holds the P1 MVP story, tasks holds the ordered work list.",
+      "Read the documents of a blueprint. Omit `docs` to get all five (prd, spec, plan, tasks, design). Prefer reading `spec` and `tasks` first — spec holds the P1 MVP story, tasks holds the ordered work list.",
     inputSchema: {
       type: "object",
       properties: {
@@ -148,7 +148,7 @@ export const TOOLS = [
         docs: {
           type: "array",
           items: DOC_ENUM,
-          description: "Which documents to return: prd, spec, plan, tasks. Defaults to all.",
+          description: "Which documents to return: prd, spec, plan, tasks, design. Defaults to all.",
         },
       },
       additionalProperties: false,
@@ -194,7 +194,7 @@ export const TOOLS = [
           type: "array",
           items: DOC_ENUM,
           description:
-            "Which documents to inline. Defaults to all four; drop `prd` to save context.",
+            "Which documents to inline. Defaults to all five; drop `prd` to save context.",
         },
       },
       additionalProperties: false,
@@ -278,7 +278,7 @@ export const TOOLS = [
           type: "object",
           additionalProperties: { type: "string" },
           description:
-            "Markdown content per document, keyed by prd/spec/plan/tasks. At least one is required.",
+            "Markdown content per document, keyed by prd/spec/plan/tasks/design. At least one is required.",
         },
         source: { type: "string", description: 'Origin of the write, e.g. "mcp" or "web".' },
         working_dir: {

@@ -13,7 +13,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-export const DOC_NAMES = ["prd", "spec", "plan", "tasks"];
+export const DOC_NAMES = ["prd", "spec", "plan", "tasks", "design"];
 
 export function rancangHome() {
   return process.env.RANCANG_HOME || path.join(os.homedir(), ".rancang");
@@ -304,7 +304,7 @@ export function buildExecutionPrompt(record, options = {}) {
     parts.push("```");
     parts.push("");
   }
-  const order = ["prd", "spec", "plan", "tasks"];
+  const order = ["prd", "spec", "plan", "tasks", "design"];
   const chosen = Array.isArray(options.include) && options.include.length ? options.include : order;
   const present = order.filter((n) => chosen.includes(n) && docs[n]);
 
@@ -330,6 +330,11 @@ export function buildExecutionPrompt(record, options = {}) {
   if (present.includes("prd")) {
     steps.push(
       "PRD.md is the product contract: goals, requirements, data model, and what is explicitly out of scope. Do not build out-of-scope features."
+    );
+  }
+  if (present.includes("design")) {
+    steps.push(
+      "DESIGN.md is the visual/UX contract: the design spec, wireframe screens and component tree. Implement the UI/UX to match DESIGN.md exactly."
     );
   }
   steps.push(

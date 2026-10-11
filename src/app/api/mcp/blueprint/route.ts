@@ -11,7 +11,7 @@ const MAX_TOTAL_CHARS = 800_000;
 /**
  * Blueprint bridge for the MCP layer.
  *
- * Rancang generates prd/spec/plan/tasks in the browser (localStorage). The MCP
+ * Rancang generates prd/spec/plan/tasks/design in the browser (localStorage). The MCP
  * server reads ~/.rancang/blueprints. This route is the hand-off: the web app
  * POSTs a finished blueprint here, the MCP server picks it up — so an agent in
  * Claude Code / Cursor / Codex can pull the exact blueprint you just made.
