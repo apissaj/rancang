@@ -67,11 +67,11 @@ export function PlanSidebar({
                 )}
                 title={p.title}
               >
-                <span className="flex min-w-0 items-center gap-1.5 truncate text-[13px] font-medium text-foreground">
+                <span className="flex min-w-0 items-center gap-1.5 truncate text-sm font-medium text-foreground">
                   <FileText className="h-3 w-3 shrink-0 text-muted-foreground" />
                   <span className="truncate">{p.title}</span>
                 </span>
-                <span className="block truncate pl-[18px] text-[11px] text-muted-foreground">
+                <span className="block truncate pl-[18px] text-xs text-muted-foreground">
                   {p.markdown ? (
                     <>
                       {timeAgo(p.createdAt)}

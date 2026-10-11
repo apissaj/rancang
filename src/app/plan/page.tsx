@@ -691,14 +691,14 @@ export default function PlanPage() {
         <SyncIndicator status={sync.status} active={sync.active} />
       </div>
 
-      <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-auto p-4 lg:flex-row lg:overflow-hidden lg:p-6">
+      <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-auto p-4 lg:flex-row lg:overflow-hidden lg:px-6 lg:pb-6 lg:pt-0">
         <div className={"flex min-h-0 flex-col gap-3 lg:overflow-y-auto " + (structure ? "lg:w-full" : "lg:w-1/3")}>
-          <div>
+          <div className="flex h-[2.625rem] shrink-0 items-center border-b">
             <h1 className="text-xl font-semibold tracking-tight">Jelaskan ide kamu</h1>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Dapatkan PRD terstruktur dengan tujuan, kebutuhan, dan rincian task langkah demi langkah.
-            </p>
           </div>
+          <p className="text-sm text-muted-foreground">
+            Dapatkan PRD terstruktur dengan tujuan, kebutuhan, dan rincian task langkah demi langkah.
+          </p>
 
           <div className="flex flex-wrap items-center gap-3 rounded-lg border bg-background/60 p-2.5">
             <div className="flex items-center gap-2">
@@ -762,7 +762,7 @@ export default function PlanPage() {
               <DropdownMenu>
                 <DropdownMenuTrigger
                   render={
-                    <Button variant="outline" size="sm" title="Pilih template ide untuk memulai lebih cepat">
+                    <Button variant="outline" size="sm" className="h-9 text-sm" title="Pilih template ide untuk memulai lebih cepat">
                       <Bookmark className="h-3.5 w-3.5" />
                       Template Ide
                       <ChevronDown className="h-3 w-3" />
@@ -779,7 +779,7 @@ export default function PlanPage() {
                       <span className="font-medium">
                         {t.label}
                       </span>
-                      <span className="text-[11px] text-muted-foreground">
+                      <span className="text-xs text-muted-foreground">
                         {t.idea.slice(0, 70)}{t.idea.length > 70 ? "…" : ""}
                       </span>
                     </DropdownMenuItem>
@@ -911,7 +911,7 @@ export default function PlanPage() {
                     );
                   })}
                 </div>
-                <div className="mt-2 flex flex-wrap gap-3 text-[11px] text-muted-foreground">
+                <div className="mt-2 flex flex-wrap gap-3 text-xs text-muted-foreground">
                   {DOC_NAMES.map((doc) => {
                     const s = docStatus[doc] ?? "pending";
                     return (
@@ -946,7 +946,7 @@ export default function PlanPage() {
                       }`}
                     >
                       {doc}.md
-                      {docs[doc] && <span className="ml-1 text-[10px]">{docs[doc].length > 0 ? "●" : ""}</span>}
+                      {docs[doc] && <span className="ml-1 text-xs">{docs[doc].length > 0 ? "●" : ""}</span>}
                     </button>
                   ))}
                 </div>

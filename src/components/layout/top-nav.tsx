@@ -27,7 +27,7 @@ function DesktopLinks({ active }: { active: (href: string) => boolean }) {
           variant="ghost"
           size="sm"
           className={cn(
-            "px-2.5 font-medium",
+            "px-2.5 text-sm font-medium",
             active(link.href) && "bg-muted text-foreground"
           )}
           nativeButton={false} render={<Link href={link.href}>{link.label}</Link>}
@@ -42,7 +42,7 @@ function Brand() {
   return (
     <Link
       href="/"
-      className="flex items-center gap-2 text-base font-semibold tracking-tight transition-opacity hover:opacity-80"
+      className="flex items-center gap-2 text-lg font-semibold tracking-tight transition-opacity hover:opacity-80"
     >
       <Hammer className="h-5 w-5" />
       Rancang
@@ -51,20 +51,20 @@ function Brand() {
 }
 
 // Desktop trailing actions (theme + auth)
-function DesktopActions() {
+function DesktopActions({ theme = true }: { theme?: boolean }) {
   return (
     <div className="hidden items-center gap-1 md:flex">
-      <ThemeToggle />
+      {theme && <ThemeToggle />}
       <AuthButton />
     </div>
   );
 }
 
 // Mobile menu (shared)
-function MobileMenu({ active }: { active: (href: string) => boolean }) {
+function MobileMenu({ active, theme = true }: { active: (href: string) => boolean; theme?: boolean }) {
   return (
     <div className="flex items-center gap-1 md:hidden">
-      <ThemeToggle />
+      {theme && <ThemeToggle />}
       <Sheet>
         <SheetTrigger
           render={
@@ -112,17 +112,21 @@ export function TopNav() {
   const active = (href: string) => pathname.startsWith(href);
 
   if (isApp) {
-    // App pages: brand left-anchored, nav + actions pushed right
+    // App pages: brand + nav on the left, auth actions on the right (no theme toggle)
     return (
       <header className="sticky top-0 z-40 w-full border-b border-border bg-background">
-        <div className="flex h-14 items-center justify-between gap-3 px-4">
-          <Brand />
-          <div className="flex items-center gap-1">
-            <div className="hidden md:flex">
+        <div className="flex h-14 items-stretch justify-between">
+          <div className="flex items-stretch">
+            <div className="flex w-64 shrink-0 items-center border-r border-border px-4">
+              <Brand />
+            </div>
+            <div className="hidden items-center pl-6 md:flex">
               <DesktopLinks active={active} />
             </div>
-            <DesktopActions />
-            <MobileMenu active={active} />
+          </div>
+          <div className="flex items-center gap-1 pr-4">
+            <DesktopActions theme={false} />
+            <MobileMenu active={active} theme={false} />
           </div>
         </div>
       </header>
