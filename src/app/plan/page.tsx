@@ -705,7 +705,7 @@ export default function PlanPage() {
           <div className="flex h-14 shrink-0 items-center border-b">
             <h1 className="text-xl font-semibold tracking-tight">Jelaskan ide kamu</h1>
           </div>
-          <p className="mt-3 text-sm text-muted-foreground">
+          <p className="text-sm text-muted-foreground">
             Dapatkan PRD terstruktur dengan tujuan, kebutuhan, dan rincian task langkah demi langkah.
           </p>
 
@@ -716,7 +716,7 @@ export default function PlanPage() {
             </div>
             {!compareMode ? (
               <Select value={model} onValueChange={(v) => v && setModel(v)}>
-                <SelectTrigger className="h-8 w-40 min-w-0 flex-1">
+                <SelectTrigger className="h-8 min-w-0 flex-1">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -751,7 +751,7 @@ export default function PlanPage() {
             <p className="text-xs text-muted-foreground">Pilih 2-3 model untuk dibandingkan.</p>
           )}
           {compareMode && compareModels.length >= 3 && (
-            <p className="text-xs text-muted-foreground">Maksimal 3 model.</p>
+            <p className="text-xs text-muted-foreground">3 model dipilih (maksimal).</p>
           )}
 
           <Textarea
@@ -761,7 +761,7 @@ export default function PlanPage() {
             value={idea}
             onChange={(e) => setIdea(e.target.value)}
             placeholder={`mis. "${TEMPLATES[0].idea}"\n\nIde lain:\n- ${TEMPLATES[1].idea}\n- ${TEMPLATES[2].idea}`}
-            className="min-h-[160px] flex-1 resize-none [field-sizing:fixed]"
+            className={`min-h-[180px] resize-none [field-sizing:fixed] ${clarify ? "hidden" : ""}`}
             disabled={!!clarify}
           />
           {!clarify && idea.trim() === "" && (
@@ -808,7 +808,11 @@ export default function PlanPage() {
               {clarifying ? "Menganalisis ide kamu..." : loading ? "Membuat..." : "Buat PRD"}
             </Button>
           )}
-          {error && <p className="text-sm text-destructive">{error}</p>}
+          {error && (
+            <div className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive">
+              {error}
+            </div>
+          )}
           {clarify && (
             <ClarifyQuestions
               clarify={clarify}
