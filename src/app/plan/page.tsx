@@ -3,8 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { nanoid } from "nanoid";
-import { Check, Copy, FileText, Loader2, Bot, ChevronDown, Bookmark, Zap, MessageSquare, Palette } from "lucide-react";
-import JSZip from "jszip";
+import { Check, Copy, FileText, Loader2, ChevronDown, Bookmark, Palette } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -21,7 +20,7 @@ import { ClarifyQuestions, type QuestionAnswers } from "@/components/plan/clarif
 import { PlanChat } from "@/components/plan/plan-chat";
 import { PreviewWindow, type PreviewDoc } from "@/components/plan/preview-window";
 import { toastManager } from "@/components/ui/toast";
-import { planStore, type PlanRecord, type PlanVersion, type BlueprintChatMessage } from "@/lib/storage";
+import { planStore, type PlanRecord, type BlueprintChatMessage } from "@/lib/storage";
 import type { ClarifyResponse } from "@/lib/clarify-types";
 import { useSync } from "@/lib/use-sync";
 import { useAuth } from "@/components/auth-provider";
@@ -48,7 +47,6 @@ export default function PlanPage() {
   const [error, setError] = useState<string | null>(null);
   const [plans, setPlans] = useState<PlanRecord[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
   const [clarifying, setClarifying] = useState(false);
   const [clarify, setClarify] = useState<ClarifyResponse | null>(null);
   const sync = useSync();
@@ -58,9 +56,7 @@ export default function PlanPage() {
   const [model, setModel] = useState("");
   const [modelError, setModelError] = useState(false);
   const [docStatus, setDocStatus] = useState<Record<string, DocStatus>>({});
-  const [editing, setEditing] = useState(false);
-  const [editDraft, setEditDraft] = useState("");
-  const [multiMode, setMultiMode] = useState(true);
+  const multiMode = true;
   const [docs, setDocs] = useState<Record<string, string>>({});
   const [mcpBlueprintId, setMcpBlueprintId] = useState<string | null>(null);
   const [mcpCopied, setMcpCopied] = useState(false);
@@ -77,7 +73,6 @@ export default function PlanPage() {
   const [chatByPlan, setChatByPlan] = useState<Record<string, BlueprintChatMessage[]>>({});
   // Tracks the latest streamed content so a mid-stream failure can still save a partial draft.
   const partialRef = useRef<{ markdown: string; docs: Record<string, string> }>({ markdown: "", docs: {} });
-  const DOC_NAMES = ["prd", "spec", "plan", "tasks"] as const;
 
   useEffect(() => {
     fetch("/api/models")
@@ -90,9 +85,10 @@ export default function PlanPage() {
       .catch(() => { setModelError(true); });
   }, []);
 
-  // Re-read from localStorage whenever the storage scope switches (login/logout),
-  // so a different identity never sees the previous identity's plans. Also covers
-  // first mount (storageVersion starts at 0).
+  // Re-read from localStorage whenever the storage scope switches (login/logout)
+  // and auto-restore a blueprint pointed to by ?mcpId=. loadPlan is intentionally
+  // excluded from deps: it changes identity every render, so including it would
+  // re-run this effect on every render and reset the UI.
   useEffect(() => {
     const all = planStore.all();
     setPlans(all);
@@ -142,6 +138,7 @@ export default function PlanPage() {
         }
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [storageVersion]);
 
   // Refresh the list after Firestore merge lands in localStorage.
@@ -291,7 +288,6 @@ export default function PlanPage() {
       planStore.save(record);
       setPlans(planStore.all());
       setActiveId(record.id);
-      setEditing(false);
       sync.syncPlan(record);
       setIdea("");
       void publishMCP(record, { silent: true });
@@ -421,7 +417,6 @@ export default function PlanPage() {
     setDocStatus({});
     setError(null);
     setClarify(null);
-    setEditing(false);
     // Restore the MCP blueprint id saved on the record (if any) so the
     // "Salin Prompt MCP" button reappears after reload/plan-switch; older
     // records that predate persistence just fall back to re-publishing.
@@ -449,7 +444,6 @@ export default function PlanPage() {
     setMcpCopied(false);
     setError(null);
     setClarify(null);
-    setEditing(false);
     setChatOpen(false);
     setActiveDoc("prd");
     manualDocRef.current = false;
@@ -472,9 +466,8 @@ export default function PlanPage() {
       type: "success",
     });
   };
-  const versions = activePlan?.versions ?? [];
   const displayedMarkdown = markdown;
-  const currentDocContent = multiMode && Object.keys(docs).length > 0 ? docs[activeDoc] || "" : displayedMarkdown;
+  const activeContent = multiMode ? docs[activeDoc] : displayedMarkdown;
 
   const persistChat = (planId: string, chat: BlueprintChatMessage[]) => {
     const rec = plans.find((p) => p.id === planId);
@@ -482,15 +475,6 @@ export default function PlanPage() {
     const updated: PlanRecord = { ...rec, chat };
     planStore.save(updated);
     setPlans(planStore.all());
-  };
-
-  const persistNewVersion = (record: PlanRecord, version: PlanVersion) => {
-    const updated: PlanRecord = { ...record, markdown: version.markdown, versions: [...record.versions, version] };
-    planStore.save(updated);
-    sync.syncPlan(updated);
-    setPlans(planStore.all());
-    setMarkdown(updated.markdown);
-    return updated;
   };
 
   // Streaming callback from the blueprint chat: while the rewrite streams, only
@@ -522,97 +506,6 @@ export default function PlanPage() {
     setPlans(planStore.all());
     setMarkdown(updated.markdown);
     void publishMCP(updated, { silent: true });
-  };
-
-  const startEdit = () => {
-    setEditDraft(markdown);
-    setEditing(true);
-  };
-
-  const cancelEdit = () => {
-    setEditing(false);
-  };
-
-  const saveEdit = () => {
-    if (!activePlan) return;
-    persistNewVersion(activePlan, {
-      id: nanoid(),
-      markdown: editDraft,
-      createdAt: Date.now(),
-      source: "manual-edit",
-    });
-    setEditing(false);
-  };
-
-  const copyMarkdown = async () => {
-    await navigator.clipboard.writeText(currentDocContent || markdown);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
-  };
-
-  const publishCurrentBlueprint = async () => {
-    if (!activePlan) return;
-    setMcpCopied(false);
-    await publishMCP(activePlan);
-  };
-
-  const downloadMarkdown = (content: string, name = "prd.md") => {
-    const blob = new Blob([content], { type: "text/markdown" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = name;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  // Download all available docs (prd/spec/plan/tasks) as a single ZIP file.
-  const downloadAllDocs = async () => {
-    const zip = new JSZip();
-    const folder = zip.folder("prd-docs");
-    let count = 0;
-    DOC_NAMES.forEach((doc) => {
-      const content = docs[doc];
-      if (!content || content.length === 0) return;
-      folder?.file(`${doc}.md`, content);
-      count++;
-    });
-    if (count === 0) return;
-    const blob = await zip.generateAsync({ type: "blob" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "prd-docs.zip";
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  // Build a single agent-rules markdown file from all available docs, so a
-  // coding agent (Claude Code, Cursor, OpenCode, Copilot, etc.) can consume
-  // the blueprint as context. Choose the target format from the button title.
-  const buildAgentExport = (format: "AGENTS" | "CLAUDE" | "CURSOR"): string => {
-    const heading = format === "AGENTS" ? "AGENTS.md" : format === "CLAUDE" ? "CLAUDE.md" : ".cursorrules";
-    const lead =
-      format === "AGENTS"
-        ? "You are collaborating on this project. Follow the blueprint below."
-        : format === "CLAUDE"
-          ? "You are Claude Code working on this project. Follow the blueprint below."
-          : "Cursor rules: follow the blueprint below while editing this codebase.";
-    const parts: string[] = [`# ${heading}`, "", lead, ""];
-    DOC_NAMES.forEach((doc) => {
-      const content = docs[doc];
-      if (!content || content.length === 0) return;
-      const label = doc.toUpperCase();
-      parts.push(`## ${label}`, "", content.trim(), "");
-    });
-    return parts.join("\n");
-  };
-
-  const downloadAgentExport = (format: "AGENTS" | "CLAUDE" | "CURSOR") => {
-    const content = buildAgentExport(format);
-    if (!content.trim()) return;
-    const name = format === "AGENTS" ? "AGENTS.md" : format === "CLAUDE" ? "CLAUDE.md" : ".cursorrules";
-    downloadMarkdown(content, name);
   };
 
   return (
@@ -742,7 +635,7 @@ export default function PlanPage() {
             statusText={
               loading
                 ? "Menulis dokumen..."
-                : `${(displayedMarkdown || docs[activeDoc] || "").split(/\s+/).filter(Boolean).length} kata`
+                : `${(activeContent || "").split(/\s+/).filter(Boolean).length} kata`
             }
             actions={
               <>
@@ -772,13 +665,7 @@ export default function PlanPage() {
               </>
             }
           >
-            {editing ? (
-              <Textarea
-                value={editDraft}
-                onChange={(e) => setEditDraft(e.target.value)}
-                className="h-full min-h-[300px] resize-none font-mono text-xs"
-              />
-            ) : loading && multiMode && docStatus[activeDoc] !== "done" && !docs[activeDoc]?.trim() ? (
+            {loading && multiMode && docStatus[activeDoc] !== "done" && !docs[activeDoc]?.trim() ? (
               <div className="flex h-full min-h-[300px] flex-col items-center justify-center gap-3 p-8 text-center">
                 <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
                 <p className="text-sm font-medium text-foreground">
@@ -792,8 +679,8 @@ export default function PlanPage() {
                     : "Dokumen ini ditulis setelah dokumen sebelumnya selesai."}
                 </p>
               </div>
-            ) : displayedMarkdown || (multiMode && docs[activeDoc]) ? (
-              <Markdown content={multiMode && docs[activeDoc] ? docs[activeDoc] : displayedMarkdown} />
+            ) : activeContent ? (
+              <Markdown content={activeContent} />
             ) : (
               <div className="flex h-full min-h-[300px] flex-col items-center justify-center gap-4 p-8 text-center">
                 <div className="flex size-14 items-center justify-center rounded-lg border bg-muted/30">
@@ -845,15 +732,5 @@ export default function PlanPage() {
 }
 
 type Answer = { question: string; selected: string[]; note?: string };
-
-function timeAgo(ts: number): string {
-  const diffMs = Date.now() - ts;
-  const mins = Math.floor(diffMs / 60000);
-  if (mins < 1) return "baru saja";
-  if (mins < 60) return `${mins}m lalu`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}j lalu`;
-  return `${Math.floor(hours / 24)}h lalu`;
-}
 
 
