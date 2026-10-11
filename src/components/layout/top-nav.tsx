@@ -117,7 +117,7 @@ export function TopNav() {
       <header className="sticky top-0 z-40 w-full border-b border-border bg-background">
         <div className="flex h-14 items-stretch justify-between">
           <div className="flex items-stretch">
-            <div className="flex w-64 shrink-0 items-center border-r border-border px-4">
+            <div className="flex w-72 shrink-0 items-center border-r border-border px-4">
               <Brand />
             </div>
             <div className="hidden items-center pl-6 md:flex">
