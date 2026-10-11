@@ -8,11 +8,3 @@ export type ClarifyResponse = {
   }>;
 };
 
-export type StructureResponse = {
-  planning: string;
-  planningNote?: string;
-  fitur: Array<{
-    name: string;
-    subFitur: string[];
-  }>;
-};

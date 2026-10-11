@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { nanoid } from "nanoid";
-import { Check, Copy, Download, FileText, Loader2, Bot, ChevronDown, ChevronRight, Bookmark, Zap, MessageSquare, Palette } from "lucide-react";
+import { Check, Copy, Download, FileText, Loader2, Bot, ChevronDown, Bookmark, Zap, MessageSquare, Palette } from "lucide-react";
 import JSZip from "jszip";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,12 +19,12 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Markdown } from "@/components/markdown";
 import { PlanSidebar } from "@/components/plan/plan-sidebar";
-import FeatureMap from "@/components/plan/feature-map";
 import { ClarifyQuestions, type QuestionAnswers } from "@/components/plan/clarify-questions";
 import { PlanChat } from "@/components/plan/plan-chat";
+import { PreviewWindow, type PreviewDoc } from "@/components/plan/preview-window";
 import { toastManager } from "@/components/ui/toast";
 import { planStore, type PlanRecord, type PlanVersion, type BlueprintChatMessage } from "@/lib/storage";
-import type { ClarifyResponse, StructureResponse } from "@/lib/clarify-types";
+import type { ClarifyResponse } from "@/lib/clarify-types";
 import { useSync } from "@/lib/use-sync";
 import { useAuth } from "@/components/auth-provider";
 import { SyncIndicator } from "@/components/sync-indicator";
@@ -61,9 +61,6 @@ export default function PlanPage() {
   const [copied, setCopied] = useState(false);
   const [clarifying, setClarifying] = useState(false);
   const [clarify, setClarify] = useState<ClarifyResponse | null>(null);
-  const [mapping, setMapping] = useState(false);
-  const [structure, setStructure] = useState<StructureResponse | null>(null);
-  const [lastAnswers, setLastAnswers] = useState<Array<{ question: string; selected: string[]; note?: string }>>([]);
   const sync = useSync();
   const { storageVersion } = useAuth();
 
@@ -447,37 +444,8 @@ export default function PlanPage() {
       selected: answers[q.id]?.selected ?? [],
       note: answers[q.id]?.note,
     }));
-    buildStructure(payload);
-  };
-
-  // After clarify, ask the LLM for a 3-level feature structure, then show it
-  // as a mind-map before generating the full PRD.
-  const buildStructure = async (answers: Array<{ question: string; selected: string[]; note?: string }>) => {
-    setMapping(true);
-    setError(null);
-    setLastAnswers(answers);
     setClarify(null);
-    try {
-      const res = await fetch("/api/plan/structure", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ idea, answers, model: model || undefined }),
-      });
-      if (!res.ok) throw new Error(await res.text());
-      const data = (await res.json()) as StructureResponse;
-      setStructure(data);
-    } catch (err) {
-      console.warn("Structure step failed, falling back to direct generation:", err);
-      generatePrd(answers);
-    } finally {
-      setMapping(false);
-    }
-  };
-
-  const continueToPrd = () => {
-    setStructure(null);
-    setClarify(null);
-    generatePrd(lastAnswers);
+    generatePrd(payload);
   };
 
   const skipClarify = () => {
@@ -692,7 +660,7 @@ export default function PlanPage() {
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-auto p-4 lg:flex-row lg:overflow-hidden lg:px-6 lg:pb-6 lg:pt-0">
-        <div className={"flex min-h-0 flex-col gap-3 lg:overflow-y-auto " + (structure ? "lg:w-full" : "lg:w-1/3")}>
+        <div className="flex min-h-0 flex-col gap-3 lg:w-1/3 lg:overflow-y-auto">
           <div className="flex h-[2.625rem] shrink-0 items-center border-b">
             <h1 className="text-xl font-semibold tracking-tight">Jelaskan ide kamu</h1>
           </div>
@@ -802,12 +770,6 @@ export default function PlanPage() {
             </Button>
           )}
           {error && <p className="text-sm text-destructive">{error}</p>}
-          {mapping && (
-            <div className="flex items-center gap-2 rounded-lg border bg-muted/20 px-3 py-2 text-sm text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Menyusun struktur fitur & sub-fitur...
-            </div>
-          )}
           {clarify && (
             <ClarifyQuestions
               clarify={clarify}
@@ -816,22 +778,9 @@ export default function PlanPage() {
               submitting={loading}
             />
           )}
-          {structure && (
-            <div className="flex flex-col gap-4">
-              <div className="flex items-center justify-between">
-                <Stepper current="structure" />
-                <Button onClick={continueToPrd} disabled={loading}>
-                  Lanjutkan
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
-              <FeatureMap data={structure} />
-            </div>
-          )}
         </div>
 
-        {!structure && (markdown || Object.values(docs).some((c) => c) || compareColumns) && (
-          compareColumns ? (
+        {compareColumns ? (
           <div className="flex flex-1 flex-col overflow-hidden rounded-xl border shadow-sm lg:w-2/3">
             <div className="grid flex-1 grid-cols-1 divide-y overflow-auto sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-3">
               {compareColumns.map((col) => (
@@ -880,104 +829,46 @@ export default function PlanPage() {
             </div>
           </div>
         ) : (
-          <div className="flex flex-1 flex-col overflow-hidden rounded-xl border shadow-sm lg:w-2/3">
-            {loading && multiMode && !compareColumns && Object.keys(docStatus).length > 0 && (
-              <div className="border-b bg-muted/10 px-4 py-3">
-                <div className="mb-2 flex items-center justify-between text-xs">
-                  <span className="font-medium text-foreground">
-                    Membuat dokumen ({Object.values(docStatus).filter((s) => s === "done").length}/{DOC_NAMES.length})
-                  </span>
-                  <span className="text-muted-foreground">
-                    {Math.round((Object.values(docStatus).filter((s) => s === "done").length / DOC_NAMES.length) * 100)}%
-                  </span>
-                </div>
-                <div
-                  role="progressbar"
-                  aria-label="Progres pembuatan dokumen"
-                  aria-valuemin={0}
-                  aria-valuemax={DOC_NAMES.length}
-                  aria-valuenow={Object.values(docStatus).filter((s) => s === "done").length}
-                  className="flex h-1.5 w-full gap-1 overflow-hidden rounded-full"
-                >
-                  {DOC_NAMES.map((doc) => {
-                    const s = docStatus[doc] ?? "pending";
-                    return (
-                      <div
-                        key={doc}
-                        className={`h-full flex-1 rounded-full transition-colors duration-500 ${
-                          s === "done" ? "bg-emerald-500" : s === "writing" ? "animate-pulse bg-foreground" : "bg-border"
-                        }`}
-                      />
-                    );
-                  })}
-                </div>
-                <div className="mt-2 flex flex-wrap gap-3 text-xs text-muted-foreground">
-                  {DOC_NAMES.map((doc) => {
-                    const s = docStatus[doc] ?? "pending";
-                    return (
-                      <span key={doc} className="flex items-center gap-1">
-                        <span
-                          className={`h-1.5 w-1.5 rounded-full ${
-                            s === "done" ? "bg-emerald-500" : s === "writing" ? "animate-pulse bg-foreground" : "bg-border"
-                          }`}
-                        />
-                        {doc}.md · {s === "done" ? "selesai" : s === "writing" ? "sedang ditulis" : "menunggu"}
-                      </span>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-            <div className="flex flex-wrap items-center gap-2 border-b bg-muted/20 px-4 py-2">
-              <span className="flex items-center gap-1.5 text-sm font-medium">
-                <FileText className="h-4 w-4 text-muted-foreground" />
-                Pratinjau
-              </span>
-              {multiMode && !compareColumns && (
-                <div className="flex items-center gap-1 rounded-lg border bg-background/60 p-1">
-                  {DOC_NAMES.map((doc) => (
-                    <button
-                      key={doc}
-                      onClick={() => setActiveDoc(doc)}
-                      className={`shrink-0 rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
-                        activeDoc === doc
-                          ? "bg-foreground text-background shadow-sm"
-                          : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
-                      }`}
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden lg:w-2/3">
+            <PreviewWindow
+              activeDoc={activeDoc as PreviewDoc}
+              multiMode={multiMode && !compareColumns}
+              docs={docs}
+              onSelectDoc={(doc) => setActiveDoc(doc)}
+              progress={loading && multiMode && !compareColumns && Object.keys(docStatus).length > 0 ? docStatus : undefined}
+              statusText={
+                loading
+                  ? "Menulis dokumen..."
+                  : `${(displayedMarkdown || docs[activeDoc] || "").split(/\s+/).filter(Boolean).length} kata`
+              }
+              actions={
+                <>
+                  {mcpBlueprintId && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={copyMcpPrompt}
+                      title="Salin prompt siap-tempel untuk agent coding kamu"
+                      className="min-w-[9.5rem]"
                     >
-                      {doc}.md
-                      {docs[doc] && <span className="ml-1 text-xs">{docs[doc].length > 0 ? "●" : ""}</span>}
-                    </button>
-                  ))}
-                </div>
-              )}
-              <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
-                {mcpBlueprintId && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={copyMcpPrompt}
-                    title="Salin prompt siap-tempel untuk agent coding kamu"
-                    className="min-w-[9.5rem]"
-                  >
-                    {mcpCopied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-                    <span className="truncate">{mcpCopied ? "Prompt tersalin" : "Salin Prompt MCP"}</span>
-                  </Button>
-                )}
-                {activePlan && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    nativeButton={false} render={<Link href={`/design?planId=${activePlan.id}`} />}
-                    title="Buat desain visual dan prototype wireframe dari PRD ini"
-                  >
-                    <Palette className="h-3.5 w-3.5" />
-                    Buat Desain
-                  </Button>
-                )}
-              </div>
-            </div>
-            <div className="flex-1 overflow-auto p-4">
+                      {mcpCopied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                      <span className="truncate">{mcpCopied ? "Prompt tersalin" : "Salin Prompt MCP"}</span>
+                    </Button>
+                  )}
+                  {activePlan && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      nativeButton={false} render={<Link href={`/design?planId=${activePlan.id}`} />}
+                      title="Buat desain visual dan prototype wireframe dari PRD ini"
+                    >
+                      <Palette className="h-3.5 w-3.5" />
+                      Buat Desain
+                    </Button>
+                  )}
+                </>
+              }
+            >
               {editing ? (
                 <Textarea
                   value={editDraft}
@@ -987,16 +878,33 @@ export default function PlanPage() {
               ) : displayedMarkdown || (multiMode && docs[activeDoc]) ? (
                 <Markdown content={multiMode && docs[activeDoc] ? docs[activeDoc] : displayedMarkdown} />
               ) : (
-                <div className="flex h-full min-h-[300px] flex-col items-center justify-center gap-3 p-8 text-center">
+                <div className="flex h-full min-h-[300px] flex-col items-center justify-center gap-4 p-8 text-center">
                   <div className="flex size-14 items-center justify-center rounded-lg border bg-muted/30">
                     <FileText className="h-6 w-6 text-muted-foreground" />
                   </div>
-                  <p className="text-sm text-muted-foreground">
-                    PRD yang kamu buat akan tampil streaming di sini secara langsung.
-                  </p>
+                  <div>
+                    <p className="text-sm font-medium text-foreground">Pratinjau PRD</p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      PRD yang kamu buat akan tampil di sini secara langsung.
+                    </p>
+                  </div>
+                  <ol className="mt-2 flex w-full max-w-xs flex-col gap-2 text-left">
+                    {[
+                      "Tulis ide atau pilih salah satu template",
+                      "Jawab pertanyaan klarifikasi bila muncul",
+                      "Dapatkan PRD, spec, plan, dan tasks",
+                    ].map((step, i) => (
+                      <li key={step} className="flex items-start gap-2.5 text-sm text-muted-foreground">
+                        <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-foreground/20 text-xs font-semibold">
+                          {i + 1}
+                        </span>
+                        <span>{step}</span>
+                      </li>
+                    ))}
+                  </ol>
                 </div>
               )}
-            </div>
+            </PreviewWindow>
             {chatOpen && activePlan && (
               <div className="h-80 shrink-0 border-t">
                 <PlanChat
@@ -1013,7 +921,7 @@ export default function PlanPage() {
               </div>
             )}
           </div>
-        ))}
+        )}
       </div>
     </div>
     </AuthGate>
@@ -1032,46 +940,4 @@ function timeAgo(ts: number): string {
   return `${Math.floor(hours / 24)}h lalu`;
 }
 
-const STEPS = ["structure", "prd", "task"] as const;
-type StepKey = (typeof STEPS)[number];
-
-const STEP_LABEL: Record<StepKey, string> = {
-  structure: "Struktur",
-  prd: "PRD",
-  task: "Task",
-};
-
-function Stepper({ current }: { current: StepKey }) {
-  const activeIdx = STEPS.indexOf(current);
-  return (
-    <ol className="flex items-center gap-2 text-sm">
-      {STEPS.map((s, i) => {
-        const done = i < activeIdx;
-        const active = i === activeIdx;
-        return (
-          <li key={s} className="flex items-center gap-2">
-            <span
-              className={
-                "flex h-6 w-6 items-center justify-center rounded-full border text-xs font-semibold " +
-                (active
-                  ? "border-primary bg-primary text-primary-foreground"
-                  : done
-                    ? "border-emerald-500 bg-emerald-500/15 text-emerald-500"
-                    : "border-foreground/20 text-muted-foreground")
-              }
-            >
-              {done ? "✓" : i + 1}
-            </span>
-            <span className={active ? "font-medium" : "text-muted-foreground"}>
-              {STEP_LABEL[s]}
-            </span>
-            {i < STEPS.length - 1 && (
-              <span className="mx-1 h-px w-8 bg-border" aria-hidden="true" />
-            )}
-          </li>
-        );
-      })}
-     </ol>
-   );
- }
 
