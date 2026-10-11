@@ -702,7 +702,7 @@ export default function PlanPage() {
 
       <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-auto p-4 lg:flex-row lg:overflow-hidden lg:px-6 lg:pb-6 lg:pt-0">
         <div className="flex min-h-0 flex-col gap-3 lg:w-1/3 lg:overflow-y-auto">
-          <div className="flex h-[2.625rem] shrink-0 items-center border-b">
+          <div className="flex h-14 shrink-0 items-center border-b">
             <h1 className="text-xl font-semibold tracking-tight">Jelaskan ide kamu</h1>
           </div>
           <p className="mt-3 text-sm text-muted-foreground">
@@ -824,7 +824,7 @@ export default function PlanPage() {
             <div className="grid min-h-0 flex-1 grid-cols-1 divide-y overflow-auto sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-3">
               {compareColumns.map((col) => (
                 <div key={col.model} className="flex min-h-[300px] flex-col overflow-hidden">
-                  <div className="flex h-[2.625rem] shrink-0 items-center justify-between border-b bg-muted/50 px-3">
+                  <div className="flex h-14 shrink-0 items-center justify-between border-b bg-muted/50 px-3">
                     <span className="text-xs font-semibold">{col.model}</span>
                     <div className="flex gap-1">
                       <Button

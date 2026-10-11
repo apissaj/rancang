@@ -54,8 +54,14 @@ function Brand() {
 export function AppNav() {
   return (
     <div className="flex flex-col">
-      <div className="flex h-[2.625rem] shrink-0 items-center border-b px-3">
-        <Brand />
+      <div className="flex h-14 shrink-0 items-center border-b px-4">
+        <Link
+          href="/"
+          className="flex items-center gap-2.5 text-2xl font-semibold tracking-tight transition-opacity hover:opacity-80"
+        >
+          <Hammer className="h-7 w-7" />
+          Rancang
+        </Link>
       </div>
     </div>
   );

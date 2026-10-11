@@ -43,7 +43,7 @@ export function PlanSidebar({
   return (
     <div className="flex w-full shrink-0 flex-col border-b bg-muted/20 lg:h-full lg:w-72 lg:border-b-0 lg:border-r">
       <AppNav />
-      <div className="flex h-[2.625rem] shrink-0 items-center justify-between px-3 border-b">
+      <div className="flex h-14 shrink-0 items-center justify-between px-3 border-b">
         <span className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           <History className="h-3.5 w-3.5" />
           Riwayat
