@@ -17,10 +17,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Markdown } from "@/components/markdown";
 import { PlanSidebar } from "@/components/plan/plan-sidebar";
 import { ClarifyQuestions, type QuestionAnswers } from "@/components/plan/clarify-questions";
-import { PlanChat } from "@/components/plan/plan-chat";
 import { PreviewWindow, type PreviewDoc } from "@/components/plan/preview-window";
 import { toastManager } from "@/components/ui/toast";
-import { planStore, type PlanRecord, type BlueprintChatMessage } from "@/lib/storage";
+import { planStore, type PlanRecord } from "@/lib/storage";
 import type { ClarifyResponse } from "@/lib/clarify-types";
 import { useSync } from "@/lib/use-sync";
 import { useAuth } from "@/components/auth-provider";
@@ -42,7 +41,6 @@ type DocStatus = "pending" | "writing" | "done";
 
 export default function PlanPage() {
   const [idea, setIdea] = useState("");
-  const [markdown, setMarkdown] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [plans, setPlans] = useState<PlanRecord[]>([]);
@@ -67,10 +65,6 @@ export default function PlanPage() {
   // When the user picks a tab manually we stop auto-following the document
   // currently being streamed.
   const manualDocRef = useRef(false);
-  const [chatOpen, setChatOpen] = useState(false);
-  // Chat is scoped to the blueprint currently open; keyed by plan id so switching
-  // blueprints in the sidebar doesn't leak one conversation into another.
-  const [chatByPlan, setChatByPlan] = useState<Record<string, BlueprintChatMessage[]>>({});
   // Tracks the latest streamed content so a mid-stream failure can still save a partial draft.
   const partialRef = useRef<{ markdown: string; docs: Record<string, string> }>({ markdown: "", docs: {} });
 
@@ -97,7 +91,6 @@ export default function PlanPage() {
     setMcpCopied(false);
     mcpIds.current = {};
     setIdea("");
-    setMarkdown("");
     setError(null);
     setClarify(null);
 
@@ -145,31 +138,6 @@ export default function PlanPage() {
   useEffect(() => {
     if (sync.status === "synced") setPlans(planStore.all());
   }, [sync.status]);
-
-  const streamOne = async (
-    ideaText: string,
-    selectedModel: string,
-    answers: Answer[] | undefined,
-    onChunk: (chunk: string) => void
-  ) => {
-    const res = await fetch("/api/plan", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ idea: ideaText, answers, model: selectedModel }),
-    });
-    if (!res.ok || !res.body) throw new Error(await res.text());
-    const reader = res.body.getReader();
-    const decoder = new TextDecoder();
-    let full = "";
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      full += decoder.decode(value, { stream: true });
-      onChunk(full);
-      partialRef.current = { markdown: full, docs: { prd: full } };
-    }
-    return full;
-  };
 
   const streamMultiDocs = async (ideaText: string, selectedModel: string, answers: Answer[] | undefined) => {
     const res = await fetch("/api/plan/full", {
@@ -247,7 +215,6 @@ export default function PlanPage() {
 
   const generatePrd = async (answers?: Answer[]) => {
     setError(null);
-    setMarkdown("");
     setActiveId(null);
     setMcpBlueprintId(null);
     setMcpCopied(false);
@@ -271,18 +238,12 @@ export default function PlanPage() {
     setDocs({});
     setDocStatus({});
     try {
-      let full: string;
-      let collected: Record<string, string> | undefined;
-      if (multiMode) {
-        collected = await streamMultiDocs(ideaText, model, answers);
-        full = collected.prd;
-      } else {
-        full = await streamOne(ideaText, model, answers, setMarkdown);
-      }
+      const collected = await streamMultiDocs(ideaText, model, answers);
+      const full = collected.prd;
       const record: PlanRecord = {
         ...draftRecord,
         markdown: full,
-        docs: multiMode && collected ? { ...collected } : undefined,
+        docs: { ...collected },
         versions: [{ id: nanoid(), markdown: full, createdAt: now, source: "generated" }],
       };
       planStore.save(record);
@@ -305,7 +266,6 @@ export default function PlanPage() {
         planStore.save(partialRecord);
         setPlans(planStore.all());
         setActiveId(partialRecord.id);
-        setMarkdown(partial.markdown);
       }
     } finally {
       setLoading(false);
@@ -411,23 +371,22 @@ export default function PlanPage() {
     if (!plan) return;
     setActiveId(id);
     setIdea(plan.idea);
-    setMarkdown(plan.markdown);
     setDocs(plan.docs ?? {});
-    setActiveDoc(plan.docs?.prd ? "prd" : "prd");
+    setActiveDoc("prd");
     setDocStatus({});
     setError(null);
     setClarify(null);
     // Restore the MCP blueprint id saved on the record (if any) so the
     // "Salin Prompt MCP" button reappears after reload/plan-switch; older
     // records that predate persistence just fall back to re-publishing.
-    const mcpId = plan.mcpId ?? mcpIds.current[id] ?? null;
+    const hadMcp = mcpIds.current[id];
+    const mcpId = plan.mcpId ?? hadMcp ?? null;
     setMcpBlueprintId(mcpId);
     setMcpCopied(false);
     if (mcpId) mcpIds.current[id] = mcpId;
-    setChatByPlan((prev) => ({ ...prev, [id]: plan.chat ?? prev[id] ?? [] }));
-    if (plan.docs && !mcpId) {
+    if (plan.docs && !mcpId && !hadMcp) {
       // Published once (bridge still has it) but id lost pre-persistence —
-      // re-publish silently to get a fresh id so the button shows.
+      // re-publish silently once per session to get a fresh id so the button shows.
       void publishMCP(plan, { silent: true });
     }
   };
@@ -437,14 +396,13 @@ export default function PlanPage() {
   const startNewPlan = () => {
     setActiveId(null);
     setIdea("");
-    setMarkdown("");
     setDocs({});
     setDocStatus({});
     setMcpBlueprintId(null);
     setMcpCopied(false);
     setError(null);
     setClarify(null);
-    setChatOpen(false);
+    setClarifying(false);
     setActiveDoc("prd");
     manualDocRef.current = false;
   };
@@ -456,57 +414,20 @@ export default function PlanPage() {
     if (activeId === id) {
       setActiveId(null);
       setIdea("");
-      setMarkdown("");
       setDocs({});
+      setDocStatus({});
+      setClarify(null);
       setError(null);
     }
+    setClarifying(false);
     toastManager.add({
       title: "PRD dihapus",
       description: removed ? `"${removed.title}" telah dihapus.` : undefined,
       type: "success",
     });
   };
-  const displayedMarkdown = markdown;
-  const activeContent = multiMode ? docs[activeDoc] : displayedMarkdown;
 
-  const persistChat = (planId: string, chat: BlueprintChatMessage[]) => {
-    const rec = plans.find((p) => p.id === planId);
-    if (!rec) return;
-    const updated: PlanRecord = { ...rec, chat };
-    planStore.save(updated);
-    setPlans(planStore.all());
-  };
-
-  // Streaming callback from the blueprint chat: while the rewrite streams, only
-  // update the in-memory doc for live preview. On the final call, commit it as a
-  // new version and republish so the MCP blueprint reflects the edit.
-  const applyChatEdit = (docName: string, content: string, final?: boolean) => {
-    const nextDocs = { ...docs, [docName]: content };
-    setDocs(nextDocs);
-
-    if (!final || !activePlan) return;
-
-    const updated: PlanRecord = {
-      ...activePlan,
-      docs: nextDocs,
-      markdown: nextDocs.prd ?? activePlan.markdown,
-      versions: [
-        ...activePlan.versions,
-        {
-          id: nanoid(),
-          markdown: nextDocs.prd ?? activePlan.markdown,
-          createdAt: Date.now(),
-          source: "ai-edit",
-          note: `Chat: ubah ${docName}.md`,
-        },
-      ],
-    };
-    planStore.save(updated);
-    sync.syncPlan(updated);
-    setPlans(planStore.all());
-    setMarkdown(updated.markdown);
-    void publishMCP(updated, { silent: true });
-  };
+  const activeContent = docs[activeDoc] || "";
 
   return (
     <AuthGate>
@@ -558,7 +479,6 @@ export default function PlanPage() {
             onChange={(e) => setIdea(e.target.value)}
             placeholder={`mis. "${TEMPLATES[0].idea}"\n\nIde lain:\n- ${TEMPLATES[1].idea}\n- ${TEMPLATES[2].idea}`}
             className={`min-h-[180px] resize-none [field-sizing:fixed] ${clarify ? "hidden" : ""}`}
-            disabled={!!clarify}
           />
           {!clarify && (
             <div className="flex flex-wrap items-center gap-2">
@@ -709,21 +629,6 @@ export default function PlanPage() {
               </div>
             )}
           </PreviewWindow>
-          {chatOpen && activePlan && (
-            <div className="h-80 shrink-0 border-t">
-              <PlanChat
-                docs={multiMode ? docs : { prd: displayedMarkdown }}
-                activeDoc={multiMode ? activeDoc : "prd"}
-                messages={chatByPlan[activePlan.id] ?? []}
-                onMessagesChange={(next) => {
-                  setChatByPlan((prev) => ({ ...prev, [activePlan.id]: next }));
-                  persistChat(activePlan.id, next);
-                }}
-                model={model || undefined}
-                onApply={(docName, content, final) => applyChatEdit(docName, content, final)}
-              />
-            </div>
-          )}
         </div>
       </div>
     </div>
