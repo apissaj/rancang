@@ -508,7 +508,7 @@ export default function PlanPage() {
             </p>
           )}
           {clarify && (
-            <p className="rounded-md border bg-muted/30 px-3 py-2 text-sm text-muted-foreground line-clamp-2">
+            <p className="break-words rounded-md border bg-muted/30 px-3 py-2 text-sm leading-relaxed text-muted-foreground">
               Ide: {idea}
             </p>
           )}
