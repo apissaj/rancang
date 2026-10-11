@@ -43,6 +43,7 @@ export default function PlanPage() {
   const [idea, setIdea] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [plans, setPlans] = useState<PlanRecord[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [clarifying, setClarifying] = useState(false);
@@ -67,6 +68,7 @@ export default function PlanPage() {
   const manualDocRef = useRef(false);
   // Tracks the latest streamed content so a mid-stream failure can still save a partial draft.
   const partialRef = useRef<{ markdown: string; docs: Record<string, string> }>({ markdown: "", docs: {} });
+  const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     fetch("/api/models")
@@ -143,6 +145,7 @@ export default function PlanPage() {
     const res = await fetch("/api/plan/full", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
+      signal: abortRef.current?.signal,
       body: JSON.stringify({ idea: ideaText, answers, model: selectedModel }),
     });
     if (!res.ok || !res.body) throw new Error(await res.text());
@@ -237,6 +240,7 @@ export default function PlanPage() {
     setLoading(true);
     setDocs({});
     setDocStatus({});
+    abortRef.current = new AbortController();
     try {
       const collected = await streamMultiDocs(ideaText, model, answers);
       const full = collected.prd;
@@ -253,7 +257,8 @@ export default function PlanPage() {
       setIdea("");
       void publishMCP(record, { silent: true });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Terjadi kesalahan");
+      const aborted = (err as Error | undefined)?.name === "AbortError";
+      if (!aborted) setError(err instanceof Error ? err.message : "Terjadi kesalahan");
       // Preserve whatever streamed so far as a recoverable draft instead of an empty shell.
       const partial = partialRef.current;
       if (partial.markdown) {
@@ -329,10 +334,13 @@ export default function PlanPage() {
     if (!idea.trim() || loading || clarifying) return;
     setClarifying(true);
     setError(null);
+    setNotice(null);
+    abortRef.current = new AbortController();
     try {
       const res = await fetch("/api/plan/clarify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        signal: abortRef.current.signal,
         body: JSON.stringify({ idea }),
       });
       if (!res.ok) throw new Error(await res.text());
@@ -343,11 +351,25 @@ export default function PlanPage() {
         await generatePrd();
       }
     } catch (err) {
+      if ((err as Error | undefined)?.name === "AbortError") {
+        return;
+      }
       console.warn("Clarify step failed, falling back to direct generation:", err);
+      setNotice("Klarifikasi dilewati karena gagal dimuat — PRD dibuat langsung dari ide kamu.");
       await generatePrd();
     } finally {
       setClarifying(false);
+      abortRef.current = null;
     }
+  };
+
+  const cancelGenerate = () => {
+    abortRef.current?.abort();
+    abortRef.current = null;
+    setClarifying(false);
+    setLoading(false);
+    setDocStatus({});
+    setError(null);
   };
 
   const submitAnswers = (answers: QuestionAnswers) => {
@@ -453,7 +475,7 @@ export default function PlanPage() {
           </p>
 
           <div className="flex items-center gap-2 rounded-lg border bg-background/60 p-2.5">
-            <Label htmlFor="model-select" className="text-sm text-muted-foreground">Model</Label>
+            <Label htmlFor="model-select" className="text-sm text-muted-foreground">Model AI</Label>
             <Select value={model} onValueChange={(v) => v && setModel(v)} disabled={models.length === 0}>
               <SelectTrigger id="model-select" className="h-8 min-w-0 flex-1">
                 <SelectValue placeholder="Memuat model..." />
@@ -537,9 +559,19 @@ export default function PlanPage() {
               {clarifying ? "Menganalisis ide kamu..." : loading ? "Membuat..." : "Buat PRD"}
             </Button>
           )}
+          {(loading || clarifying) && (
+            <Button variant="outline" onClick={cancelGenerate} className="w-full">
+              Batal
+            </Button>
+          )}
           {error && (
             <div className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive">
               {error}
+            </div>
+          )}
+          {notice && (
+            <div className="rounded-lg border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+              {notice}
             </div>
           )}
           {clarify && (

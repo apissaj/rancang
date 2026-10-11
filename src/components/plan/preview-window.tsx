@@ -38,6 +38,7 @@ export function PreviewWindow({
   children: ReactNode;
 }) {
   const current = DOC_FILE[activeDoc];
+  const hasAnyDoc = PREVIEW_DOCS.some((d) => !!docs[d]?.trim());
   const progressDocs = PREVIEW_DOCS.filter((doc) => progress?.[doc]);
   const doneCount = progressDocs.filter((doc) => progress?.[doc] === "done").length;
   return (
@@ -115,7 +116,7 @@ export function PreviewWindow({
       )}
 
       <div className="flex min-h-0 flex-1">
-        {multiMode && (
+        {multiMode && hasAnyDoc && (
           <div className="hidden w-44 shrink-0 border-r bg-muted/20 sm:block">
             <div className="px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
               Explorer
@@ -160,7 +161,7 @@ export function PreviewWindow({
 
       <div className="flex items-center gap-4 border-t bg-muted/40 px-4 py-1.5 font-mono text-[10px] text-muted-foreground/70">
         <span className="flex items-center gap-1">
-          <ChevronRight className="size-3" /> main
+          <ChevronRight className="size-3" /> {current.name}
         </span>
         <span className="ml-auto flex min-w-0 items-center gap-1.5 truncate">
           {isGenerating && <Loader2 className="size-3 shrink-0 animate-spin" aria-hidden="true" />}
