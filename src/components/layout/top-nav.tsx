@@ -50,31 +50,12 @@ function Brand() {
   );
 }
 
-// Sidebar navigation for app pages (logo + vertical nav + auth)
+// Sidebar header for app pages (logo only)
 export function AppNav() {
-  const pathname = usePathname();
-  const active = (href: string) => pathname.startsWith(href);
   return (
     <div className="flex flex-col">
       <div className="flex h-[2.625rem] shrink-0 items-center border-b px-3">
         <Brand />
-      </div>
-      <nav className="flex flex-col gap-0.5 border-b px-2 py-2">
-        {links.map((link) => (
-          <Link
-            key={link.href}
-            href={link.href}
-            className={cn(
-              "rounded-md px-2.5 py-1.5 text-sm font-medium outline-none transition-colors hover:bg-muted hover:text-foreground",
-              active(link.href) && "bg-muted text-foreground"
-            )}
-          >
-            {link.label}
-          </Link>
-        ))}
-      </nav>
-      <div className="hidden items-center gap-1 px-2 py-2 md:flex">
-        <AuthButton />
       </div>
     </div>
   );
