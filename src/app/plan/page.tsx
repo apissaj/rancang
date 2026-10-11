@@ -448,7 +448,7 @@ export default function PlanPage() {
           <div className="flex h-14 shrink-0 items-center border-b px-4">
             <h1 className="text-xl font-semibold tracking-tight">Jelaskan ide kamu</h1>
           </div>
-          <p className="text-sm text-muted-foreground">
+          <p className="px-4 text-sm text-muted-foreground">
             Dapatkan PRD terstruktur dengan tujuan, kebutuhan, dan rincian task langkah demi langkah.
           </p>
 
@@ -466,7 +466,7 @@ export default function PlanPage() {
             </Select>
           </div>
           {modelError && (
-            <div className="rounded-md border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+            <div className="rounded-lg border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
               Gagal memuat daftar model. Coba refresh halaman atau periksa koneksi.
             </div>
           )}
@@ -478,8 +478,18 @@ export default function PlanPage() {
             value={idea}
             onChange={(e) => setIdea(e.target.value)}
             placeholder={`mis. "${TEMPLATES[0].idea}"\n\nIde lain:\n- ${TEMPLATES[1].idea}\n- ${TEMPLATES[2].idea}`}
-            className={`min-h-[180px] resize-none [field-sizing:fixed] ${clarify ? "hidden" : ""}`}
+            className={`h-44 resize-none overflow-y-auto ${clarify ? "hidden" : ""}`}
           />
+          {idea.length > 0 && !clarify && (
+            <p className="-mt-1 text-right text-xs text-muted-foreground">
+              {idea.length} / 10.000 karakter
+            </p>
+          )}
+          {clarify && (
+            <p className="rounded-md border bg-muted/30 px-3 py-2 text-sm text-muted-foreground line-clamp-2">
+              Ide: {idea}
+            </p>
+          )}
           {!clarify && (
             <div className="flex flex-wrap items-center justify-between gap-2">
               <DropdownMenu>
@@ -512,11 +522,6 @@ export default function PlanPage() {
               {idea.trim() === "" && (
                 <span className="text-xs text-muted-foreground">
                   atau tulis ide kamu sendiri di atas
-                </span>
-              )}
-              {idea.length > 0 && (
-                <span className="text-xs text-muted-foreground text-right">
-                  {idea.length} / 10.000 karakter
                 </span>
               )}
             </div>
