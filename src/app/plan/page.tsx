@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { nanoid } from "nanoid";
-import { Check, Copy, Download, FileText, Loader2, Bot, ChevronDown, Bookmark, Zap, MessageSquare, Palette } from "lucide-react";
+import { Check, Copy, FileText, Loader2, Bot, ChevronDown, Bookmark, Zap, MessageSquare, Palette } from "lucide-react";
 import JSZip from "jszip";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,9 +13,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Markdown } from "@/components/markdown";
 import { PlanSidebar } from "@/components/plan/plan-sidebar";
@@ -41,14 +39,6 @@ const TEMPLATES = [
   { label: "AI Summarizer", idea: "Ekstensi browser yang merangkum artikel panjang menjadi 3 poin singkat dan bisa disimpan ke koleksi." },
 ];
 
-type CompareColumn = {
-  model: string;
-  content: string;
-  done: boolean;
-  error?: string;
-  copied?: boolean;
-};
-
 type DocStatus = "pending" | "writing" | "done";
 
 export default function PlanPage() {
@@ -67,9 +57,6 @@ export default function PlanPage() {
   const [models, setModels] = useState<string[]>([]);
   const [model, setModel] = useState("");
   const [modelError, setModelError] = useState(false);
-  const [compareMode, setCompareMode] = useState(false);
-  const [compareModels, setCompareModels] = useState<string[]>([]);
-  const [compareColumns, setCompareColumns] = useState<CompareColumn[] | null>(null);
   const [docStatus, setDocStatus] = useState<Record<string, DocStatus>>({});
   const [editing, setEditing] = useState(false);
   const [editDraft, setEditDraft] = useState("");
@@ -117,7 +104,6 @@ export default function PlanPage() {
     setMarkdown("");
     setError(null);
     setClarify(null);
-    setCompareColumns(null);
 
     // Auto-restore / import blueprint if ?mcpId= query param is present
     if (typeof window !== "undefined") {
@@ -162,14 +148,6 @@ export default function PlanPage() {
   useEffect(() => {
     if (sync.status === "synced") setPlans(planStore.all());
   }, [sync.status]);
-
-  const toggleCompareModel = (m: string) => {
-    if (compareModels.includes(m)) {
-      setCompareModels(compareModels.filter((x) => x !== m));
-    } else if (compareModels.length < 3) {
-      setCompareModels([...compareModels, m]);
-    }
-  };
 
   const streamOne = async (
     ideaText: string,
@@ -292,46 +270,7 @@ export default function PlanPage() {
     planStore.save(draftRecord);
     setPlans(planStore.all());
 
-    if (compareMode && compareModels.length >= 2) {
-      setLoading(true);
-      const columns: CompareColumn[] = compareModels.map((m) => ({ model: m, content: "", done: false }));
-      setCompareColumns(columns);
-      setIdea("");
-
-      await Promise.all(
-        compareModels.map(async (m) => {
-          try {
-            const full = await streamOne(ideaText, m, answers, (chunk) => {
-              setCompareColumns((prev) => prev?.map((c) => (c.model === m ? { ...c, content: chunk } : c)) ?? prev);
-            });
-            const now = Date.now();
-            const record: PlanRecord = {
-              id: nanoid(),
-              title: `${ideaText.slice(0, 60)} (${m})`,
-              idea: ideaText,
-              markdown: full,
-              createdAt: now,
-              versions: [{ id: nanoid(), markdown: full, createdAt: now, source: "generated" }],
-            };
-            planStore.save(record);
-            sync.syncPlan(record);
-          } catch (err) {
-            const message = err instanceof Error ? err.message : "Terjadi kesalahan";
-            setCompareColumns((prev) => prev?.map((c) => (c.model === m ? { ...c, error: message } : c)) ?? prev);
-          } finally {
-            setCompareColumns((prev) => prev?.map((c) => (c.model === m ? { ...c, done: true } : c)) ?? prev);
-          }
-        })
-      );
-      // Draft record (empty) is only useful if nothing else saved; remove it.
-      planStore.remove(recordId);
-      setPlans(planStore.all());
-      setLoading(false);
-      return;
-    }
-
     setLoading(true);
-    setCompareColumns(null);
     setDocs({});
     setDocStatus({});
     try {
@@ -482,7 +421,6 @@ export default function PlanPage() {
     setDocStatus({});
     setError(null);
     setClarify(null);
-    setCompareColumns(null);
     setEditing(false);
     // Restore the MCP blueprint id saved on the record (if any) so the
     // "Salin Prompt MCP" button reappears after reload/plan-switch; older
@@ -511,7 +449,6 @@ export default function PlanPage() {
     setMcpCopied(false);
     setError(null);
     setClarify(null);
-    setCompareColumns(null);
     setEditing(false);
     setChatOpen(false);
     setActiveDoc("prd");
@@ -678,14 +615,6 @@ export default function PlanPage() {
     downloadMarkdown(content, name);
   };
 
-  const copyColumn = async (m: string, content: string) => {
-    await navigator.clipboard.writeText(content);
-    setCompareColumns((prev) => prev?.map((c) => (c.model === m ? { ...c, copied: true } : c)) ?? prev);
-    setTimeout(() => {
-      setCompareColumns((prev) => prev?.map((c) => (c.model === m ? { ...c, copied: false } : c)) ?? prev);
-    }, 1500);
-  };
-
   return (
     <AuthGate>
     <div className="flex flex-1 flex-col overflow-hidden lg:h-dvh lg:flex-none lg:flex-row">
@@ -709,49 +638,23 @@ export default function PlanPage() {
             Dapatkan PRD terstruktur dengan tujuan, kebutuhan, dan rincian task langkah demi langkah.
           </p>
 
-          <div className="flex flex-wrap items-center gap-3 rounded-lg border bg-background/60 p-2.5">
-            <div className="flex items-center gap-2">
-              <Switch id="compare-mode" checked={compareMode} onCheckedChange={setCompareMode} />
-              <Label htmlFor="compare-mode" className="text-sm">Bandingkan model</Label>
-            </div>
-            {!compareMode ? (
-              <Select value={model} onValueChange={(v) => v && setModel(v)}>
-                <SelectTrigger className="h-8 min-w-0 flex-1">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {models.map((m) => (
-                    <SelectItem key={m} value={m}>
-                      {m}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            ) : (
-              <div className="flex flex-wrap gap-1">
+          <div className="flex items-center gap-2 rounded-lg border bg-background/60 p-2.5">
+            <Label htmlFor="model-select" className="text-sm text-muted-foreground">Model</Label>
+            <Select value={model} onValueChange={(v) => v && setModel(v)}>
+              <SelectTrigger id="model-select" className="h-8 min-w-0 flex-1">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
                 {models.map((m) => (
-                  <Badge
-                    key={m}
-                    variant={compareModels.includes(m) ? "default" : "outline"}
-                    className="cursor-pointer select-none"
-                    onClick={() => toggleCompareModel(m)}
-                  >
-                    {m}
-                  </Badge>
+                  <SelectItem key={m} value={m}>{m}</SelectItem>
                 ))}
-              </div>
-            )}
+              </SelectContent>
+            </Select>
           </div>
           {modelError && (
             <div className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive">
               Gagal memuat daftar model. Coba refresh halaman atau periksa koneksi.
             </div>
-          )}
-          {compareMode && compareModels.length < 2 && (
-            <p className="text-xs text-muted-foreground">Pilih 2-3 model untuk dibandingkan.</p>
-          )}
-          {compareMode && compareModels.length >= 3 && (
-            <p className="text-xs text-muted-foreground">3 model dipilih (maksimal).</p>
           )}
 
           <Textarea
@@ -764,7 +667,7 @@ export default function PlanPage() {
             className={`min-h-[180px] resize-none [field-sizing:fixed] ${clarify ? "hidden" : ""}`}
             disabled={!!clarify}
           />
-          {!clarify && idea.trim() === "" && (
+          {!clarify && (
             <div className="flex flex-wrap items-center gap-2">
               <DropdownMenu>
                 <DropdownMenuTrigger
@@ -793,16 +696,18 @@ export default function PlanPage() {
                   ))}
                 </DropdownMenuContent>
               </DropdownMenu>
-              <span className="text-xs text-muted-foreground">
-                atau tulis ide kamu sendiri di atas
-              </span>
+              {idea.trim() === "" && (
+                <span className="text-xs text-muted-foreground">
+                  atau tulis ide kamu sendiri di atas
+                </span>
+              )}
             </div>
           )}
           {!clarify && (
             <Button
               onClick={startGenerate}
-              disabled={loading || clarifying || !idea.trim() || (compareMode && compareModels.length < 2)}
-              className="w-full sm:w-auto"
+              disabled={loading || clarifying || !idea.trim()}
+              className="w-full"
             >
               {(loading || clarifying) && <Loader2 className="h-4 w-4 animate-spin" />}
               {clarifying ? "Menganalisis ide kamu..." : loading ? "Membuat..." : "Buat PRD"}
@@ -823,166 +728,116 @@ export default function PlanPage() {
           )}
         </div>
 
-        {compareColumns ? (
-          <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border bg-card shadow-[0_8px_30px_rgba(0,0,0,0.12)] lg:w-2/3">
-            <div className="grid min-h-0 flex-1 grid-cols-1 divide-y overflow-auto sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-3">
-              {compareColumns.map((col) => (
-                <div key={col.model} className="flex min-h-[300px] flex-col overflow-hidden">
-                  <div className="flex h-14 shrink-0 items-center justify-between border-b bg-muted/50 px-3">
-                    <span className="text-xs font-semibold">{col.model}</span>
-                    <div className="flex gap-1">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-6 px-2"
-                        onClick={() => copyColumn(col.model, col.content)}
-                        disabled={!col.done || !col.content}
-                      >
-                        {col.copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-6 px-2"
-                        onClick={() => downloadMarkdown(col.content, `prd-${col.model.replace(/\//g, "-")}.md`)}
-                        disabled={!col.done || !col.content}
-                      >
-                        <Download className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  </div>
-                  <div className="flex-1 overflow-auto p-3">
-                    {col.error ? (
-                      <p className="text-sm text-destructive">{col.error}</p>
-                    ) : (
-                      <>
-                        <Markdown content={col.content} />
-                        {!col.done && !col.content && (
-                          <span className="inline-flex gap-1 py-1">
-                            <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-current [animation-delay:-0.3s]" />
-                            <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-current [animation-delay:-0.15s]" />
-                            <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-current" />
-                          </span>
-                        )}
-                      </>
-                    )}
-                  </div>
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden lg:w-2/3">
+          <PreviewWindow
+            activeDoc={activeDoc as PreviewDoc}
+            multiMode={multiMode}
+            docs={docs}
+            onSelectDoc={(doc) => {
+              manualDocRef.current = true;
+              setActiveDoc(doc);
+            }}
+            progress={loading && multiMode && Object.keys(docStatus).length > 0 ? docStatus : undefined}
+            isGenerating={loading && multiMode}
+            statusText={
+              loading
+                ? "Menulis dokumen..."
+                : `${(displayedMarkdown || docs[activeDoc] || "").split(/\s+/).filter(Boolean).length} kata`
+            }
+            actions={
+              <>
+                {mcpBlueprintId && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={copyMcpPrompt}
+                    title="Salin prompt siap-tempel untuk agent coding kamu"
+                    className="min-w-[9.5rem]"
+                  >
+                    {mcpCopied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                    <span className="truncate">{mcpCopied ? "Prompt tersalin" : "Salin Prompt MCP"}</span>
+                  </Button>
+                )}
+                {activePlan && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    nativeButton={false} render={<Link href={`/design?planId=${activePlan.id}`} />}
+                    title="Buat desain visual dan prototype wireframe dari PRD ini"
+                  >
+                    <Palette className="h-3.5 w-3.5" />
+                    Buat Desain
+                  </Button>
+                )}
+              </>
+            }
+          >
+            {editing ? (
+              <Textarea
+                value={editDraft}
+                onChange={(e) => setEditDraft(e.target.value)}
+                className="h-full min-h-[300px] resize-none font-mono text-xs"
+              />
+            ) : loading && multiMode && docStatus[activeDoc] !== "done" && !docs[activeDoc]?.trim() ? (
+              <div className="flex h-full min-h-[300px] flex-col items-center justify-center gap-3 p-8 text-center">
+                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                <p className="text-sm font-medium text-foreground">
+                  {docStatus[activeDoc] === "writing"
+                    ? `Menulis ${activeDoc.toUpperCase()}...`
+                    : `Menunggu ${activeDoc.toUpperCase()}...`}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {docStatus[activeDoc] === "writing"
+                    ? "Isi dokumen akan muncul di sini saat model mulai menulis."
+                    : "Dokumen ini ditulis setelah dokumen sebelumnya selesai."}
+                </p>
+              </div>
+            ) : displayedMarkdown || (multiMode && docs[activeDoc]) ? (
+              <Markdown content={multiMode && docs[activeDoc] ? docs[activeDoc] : displayedMarkdown} />
+            ) : (
+              <div className="flex h-full min-h-[300px] flex-col items-center justify-center gap-4 p-8 text-center">
+                <div className="flex size-14 items-center justify-center rounded-lg border bg-muted/30">
+                  <FileText className="h-6 w-6 text-muted-foreground" />
                 </div>
-              ))}
-            </div>
-          </div>
-        ) : (
-          <div className="flex min-h-0 flex-1 flex-col overflow-hidden lg:w-2/3">
-            <PreviewWindow
-              activeDoc={activeDoc as PreviewDoc}
-              multiMode={multiMode && !compareColumns}
-              docs={docs}
-              onSelectDoc={(doc) => {
-                manualDocRef.current = true;
-                setActiveDoc(doc);
-              }}
-              progress={loading && multiMode && !compareColumns && Object.keys(docStatus).length > 0 ? docStatus : undefined}
-              isGenerating={loading && multiMode && !compareColumns}
-              statusText={
-                loading
-                  ? "Menulis dokumen..."
-                  : `${(displayedMarkdown || docs[activeDoc] || "").split(/\s+/).filter(Boolean).length} kata`
-              }
-              actions={
-                <>
-                  {mcpBlueprintId && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={copyMcpPrompt}
-                      title="Salin prompt siap-tempel untuk agent coding kamu"
-                      className="min-w-[9.5rem]"
-                    >
-                      {mcpCopied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-                      <span className="truncate">{mcpCopied ? "Prompt tersalin" : "Salin Prompt MCP"}</span>
-                    </Button>
-                  )}
-                  {activePlan && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      nativeButton={false} render={<Link href={`/design?planId=${activePlan.id}`} />}
-                      title="Buat desain visual dan prototype wireframe dari PRD ini"
-                    >
-                      <Palette className="h-3.5 w-3.5" />
-                      Buat Desain
-                    </Button>
-                  )}
-                </>
-              }
-            >
-              {editing ? (
-                <Textarea
-                  value={editDraft}
-                  onChange={(e) => setEditDraft(e.target.value)}
-                  className="h-full min-h-[300px] resize-none font-mono text-xs"
-                />
-              ) : loading && multiMode && docStatus[activeDoc] !== "done" && !docs[activeDoc]?.trim() ? (
-                <div className="flex h-full min-h-[300px] flex-col items-center justify-center gap-3 p-8 text-center">
-                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-                  <p className="text-sm font-medium text-foreground">
-                    {docStatus[activeDoc] === "writing"
-                      ? `Menulis ${activeDoc.toUpperCase()}...`
-                      : `Menunggu ${activeDoc.toUpperCase()}...`}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {docStatus[activeDoc] === "writing"
-                      ? "Isi dokumen akan muncul di sini saat model mulai menulis."
-                      : "Dokumen ini ditulis setelah dokumen sebelumnya selesai."}
+                <div>
+                  <p className="text-sm font-medium text-foreground">Pratinjau PRD</p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    PRD yang kamu buat akan tampil di sini secara langsung.
                   </p>
                 </div>
-              ) : displayedMarkdown || (multiMode && docs[activeDoc]) ? (
-                <Markdown content={multiMode && docs[activeDoc] ? docs[activeDoc] : displayedMarkdown} />
-              ) : (
-                <div className="flex h-full min-h-[300px] flex-col items-center justify-center gap-4 p-8 text-center">
-                  <div className="flex size-14 items-center justify-center rounded-lg border bg-muted/30">
-                    <FileText className="h-6 w-6 text-muted-foreground" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-foreground">Pratinjau PRD</p>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      PRD yang kamu buat akan tampil di sini secara langsung.
-                    </p>
-                  </div>
-                  <ol className="mt-2 flex w-full max-w-xs flex-col gap-2 text-left">
-                    {[
-                      "Tulis ide atau pilih salah satu template",
-                      "Jawab pertanyaan klarifikasi bila muncul",
-                      "Dapatkan PRD, spec, plan, dan tasks",
-                    ].map((step, i) => (
-                      <li key={step} className="flex items-start gap-2.5 text-sm text-muted-foreground">
-                        <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-foreground/20 text-xs font-semibold">
-                          {i + 1}
-                        </span>
-                        <span>{step}</span>
-                      </li>
-                    ))}
-                  </ol>
-                </div>
-              )}
-            </PreviewWindow>
-            {chatOpen && activePlan && (
-              <div className="h-80 shrink-0 border-t">
-                <PlanChat
-                  docs={multiMode ? docs : { prd: displayedMarkdown }}
-                  activeDoc={multiMode ? activeDoc : "prd"}
-                  messages={chatByPlan[activePlan.id] ?? []}
-                  onMessagesChange={(next) => {
-                    setChatByPlan((prev) => ({ ...prev, [activePlan.id]: next }));
-                    persistChat(activePlan.id, next);
-                  }}
-                  model={model || undefined}
-                  onApply={(docName, content, final) => applyChatEdit(docName, content, final)}
-                />
+                <ol className="mt-2 flex w-full max-w-xs flex-col gap-2 text-left">
+                  {[
+                    "Tulis ide atau pilih salah satu template",
+                    "Jawab pertanyaan klarifikasi bila muncul",
+                    "Dapatkan PRD, spec, plan, dan tasks",
+                  ].map((step, i) => (
+                    <li key={step} className="flex items-start gap-2.5 text-sm text-muted-foreground">
+                      <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-foreground/20 text-xs font-semibold">
+                        {i + 1}
+                      </span>
+                      <span>{step}</span>
+                    </li>
+                  ))}
+                </ol>
               </div>
             )}
-          </div>
-        )}
+          </PreviewWindow>
+          {chatOpen && activePlan && (
+            <div className="h-80 shrink-0 border-t">
+              <PlanChat
+                docs={multiMode ? docs : { prd: displayedMarkdown }}
+                activeDoc={multiMode ? activeDoc : "prd"}
+                messages={chatByPlan[activePlan.id] ?? []}
+                onMessagesChange={(next) => {
+                  setChatByPlan((prev) => ({ ...prev, [activePlan.id]: next }));
+                  persistChat(activePlan.id, next);
+                }}
+                model={model || undefined}
+                onApply={(docName, content, final) => applyChatEdit(docName, content, final)}
+              />
+            </div>
+          )}
+        </div>
       </div>
     </div>
     </AuthGate>
