@@ -30,6 +30,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScaffoldDialog } from "@/components/scaffold-dialog";
+import { AppNav } from "@/components/layout/top-nav";
 
 /* ── Types ─────────────────────────────────────────────── */
 
@@ -480,7 +481,11 @@ export default function ProjectsPage() {
   const overallPercent = totalTasks > 0 ? Math.round((totalDone / totalTasks) * 100) : 0;
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8 md:px-8">
+    <div className="flex flex-1 flex-col overflow-hidden lg:h-dvh lg:flex-row">
+      <div className="flex w-full shrink-0 flex-col border-b bg-muted/20 lg:h-full lg:w-72 lg:border-b-0 lg:border-r">
+        <AppNav />
+      </div>
+      <div className="mx-auto max-w-6xl px-4 py-8 md:px-8 lg:overflow-y-auto">
       {/* Header */}
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
@@ -1027,6 +1032,7 @@ export default function ProjectsPage() {
             </Card>
           );
         })}
+      </div>
       </div>
     </div>
   );

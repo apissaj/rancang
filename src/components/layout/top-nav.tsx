@@ -50,6 +50,36 @@ function Brand() {
   );
 }
 
+// Sidebar navigation for app pages (logo + vertical nav + auth)
+export function AppNav() {
+  const pathname = usePathname();
+  const active = (href: string) => pathname.startsWith(href);
+  return (
+    <div className="flex flex-col">
+      <div className="flex h-[2.625rem] shrink-0 items-center border-b px-3">
+        <Brand />
+      </div>
+      <nav className="flex flex-col gap-0.5 border-b px-2 py-2">
+        {links.map((link) => (
+          <Link
+            key={link.href}
+            href={link.href}
+            className={cn(
+              "rounded-md px-2.5 py-1.5 text-sm font-medium outline-none transition-colors hover:bg-muted hover:text-foreground",
+              active(link.href) && "bg-muted text-foreground"
+            )}
+          >
+            {link.label}
+          </Link>
+        ))}
+      </nav>
+      <div className="hidden items-center gap-1 px-2 py-2 md:flex">
+        <AuthButton />
+      </div>
+    </div>
+  );
+}
+
 // Desktop trailing actions (theme + auth)
 function DesktopActions({ theme = true }: { theme?: boolean }) {
   return (
@@ -112,25 +142,7 @@ export function TopNav() {
   const active = (href: string) => pathname.startsWith(href);
 
   if (isApp) {
-    // App pages: brand + nav on the left, auth actions on the right (no theme toggle)
-    return (
-      <header className="sticky top-0 z-40 w-full border-b border-border bg-background">
-        <div className="flex h-14 items-stretch justify-between">
-          <div className="flex items-stretch">
-            <div className="flex w-72 shrink-0 items-center border-r border-border px-4">
-              <Brand />
-            </div>
-            <div className="hidden items-center pl-6 md:flex">
-              <DesktopLinks active={active} />
-            </div>
-          </div>
-          <div className="flex items-center gap-1 pr-4">
-            <DesktopActions theme={false} />
-            <MobileMenu active={active} theme={false} />
-          </div>
-        </div>
-      </header>
-    );
+    return null;
   }
 
   // Landing: brand left, nav centered, actions right (within max-w-6xl)

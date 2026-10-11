@@ -15,6 +15,7 @@ import {
   AlertDialogCancel,
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
+import { AppNav } from "@/components/layout/top-nav";
 import type { DesignRecord } from "@/lib/storage";
 
 export function DesignSidebar({
@@ -31,7 +32,8 @@ export function DesignSidebar({
   onDelete: (id: string) => void;
 }) {
   return (
-    <div className="w-full shrink-0 border-b bg-muted/20 lg:w-64 lg:border-b-0 lg:border-r">
+    <div className="flex w-full shrink-0 flex-col border-b bg-muted/20 lg:h-full lg:w-72 lg:border-b-0 lg:border-r">
+      <AppNav />
       <div className="p-2">
         <Button variant="secondary" className="w-full justify-start gap-2 shadow-sm" onClick={onNewDesign}>
           <Plus className="h-4 w-4" />
@@ -41,8 +43,7 @@ export function DesignSidebar({
       <div className="px-3 py-2 text-xs font-semibold uppercase text-muted-foreground">
         Recent Designs
       </div>
-      {/* 5rem = the "New design" block (h-8 button + p-2) plus the 2rem section label above. */}
-      <ScrollArea className="h-40 lg:h-[calc(100%-5rem)]">
+      <ScrollArea className="h-40 lg:h-auto lg:flex-1">
         <div className="flex flex-col gap-1 px-2 pb-2 lg:flex-col">
           {designs.map((d) => (
             <div

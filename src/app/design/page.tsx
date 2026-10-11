@@ -277,7 +277,7 @@ function DesignPageInner() {
 
   return (
     <AuthGate>
-      <div className="flex flex-1 flex-col overflow-hidden lg:flex-row">
+      <div className="flex flex-1 flex-col overflow-hidden lg:h-dvh lg:flex-row">
         <div className="flex flex-col">
           <DesignSidebar
             designs={designs}

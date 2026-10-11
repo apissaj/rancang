@@ -688,7 +688,7 @@ export default function PlanPage() {
 
   return (
     <AuthGate>
-    <div className="flex flex-1 flex-col overflow-hidden lg:h-[calc(100dvh-3.5rem)] lg:flex-none lg:flex-row">
+    <div className="flex flex-1 flex-col overflow-hidden lg:h-dvh lg:flex-none lg:flex-row">
       <div className="flex min-h-0 flex-col">
         <PlanSidebar
           plans={plans}

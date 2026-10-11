@@ -1,6 +1,7 @@
 "use client";
 
 import { FileText, History, Plus, Trash2 } from "lucide-react";
+import { AppNav } from "@/components/layout/top-nav";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import type { PlanRecord } from "@/lib/storage";
@@ -41,6 +42,7 @@ export function PlanSidebar({
 }) {
   return (
     <div className="flex w-full shrink-0 flex-col border-b bg-muted/20 lg:h-full lg:w-72 lg:border-b-0 lg:border-r">
+      <AppNav />
       <div className="flex h-[2.625rem] shrink-0 items-center justify-between px-3 border-b">
         <span className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           <History className="h-3.5 w-3.5" />
@@ -62,7 +64,7 @@ export function PlanSidebar({
           )}
         </div>
       </div>
-      <ScrollArea className="h-40 lg:h-[calc(100%-2.625rem)]">
+      <ScrollArea className="h-40 lg:h-auto lg:flex-1">
         <div className="flex flex-col gap-1 px-2 py-2">
           {plans.map((p) => (
             <div
