@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { ChevronDown, ChevronRight, FileCheck2, FileCode2, FileCog, FileText } from "lucide-react";
+import { ChevronDown, ChevronRight, FileCheck2, FileCode2, FileCog, FileText, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export const PREVIEW_DOCS = ["prd", "spec", "plan", "tasks"] as const;
@@ -24,6 +24,7 @@ export function PreviewWindow({
   actions,
   statusText,
   progress,
+  isGenerating = false,
   children,
 }: {
   activeDoc: PreviewDoc;
@@ -33,6 +34,7 @@ export function PreviewWindow({
   actions?: ReactNode;
   statusText: string;
   progress?: Partial<Record<PreviewDoc, DocState>>;
+  isGenerating?: boolean;
   children: ReactNode;
 }) {
   const current = DOC_FILE[activeDoc];
@@ -58,6 +60,7 @@ export function PreviewWindow({
             const { name, icon: Icon } = DOC_FILE[doc];
             const isActive = activeDoc === doc;
             const hasContent = !!docs[doc];
+            const isWriting = progress?.[doc] === "writing";
             return (
               <button
                 key={doc}
@@ -72,7 +75,8 @@ export function PreviewWindow({
               >
                 <Icon className="size-3.5 shrink-0" />
                 {name}
-                {hasContent && <span className="size-1.5 rounded-full bg-emerald-500" aria-hidden="true" />}
+                {hasContent && !isWriting && <span className="size-1.5 rounded-full bg-emerald-500" aria-hidden="true" />}
+                {isWriting && <span className="size-1.5 animate-pulse rounded-full bg-primary" aria-hidden="true" />}
               </button>
             );
           })}
@@ -158,7 +162,10 @@ export function PreviewWindow({
         <span className="flex items-center gap-1">
           <ChevronRight className="size-3" /> main
         </span>
-        <span className="ml-auto truncate">{statusText}</span>
+        <span className="ml-auto flex min-w-0 items-center gap-1.5 truncate">
+          {isGenerating && <Loader2 className="size-3 shrink-0 animate-spin" aria-hidden="true" />}
+          <span className="truncate">{statusText}</span>
+        </span>
         {progressDocs.length > 0 && (
           <span className="shrink-0">· {doneCount}/{progressDocs.length} dokumen</span>
         )}

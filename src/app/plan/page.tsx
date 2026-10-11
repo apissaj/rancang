@@ -81,6 +81,9 @@ export default function PlanPage() {
   // re-publishing after an edit updates the same blueprint instead of cloning.
   const mcpIds = useRef<Record<string, string>>({});
   const [activeDoc, setActiveDoc] = useState("prd");
+  // When the user picks a tab manually we stop auto-following the document
+  // currently being streamed.
+  const manualDocRef = useRef(false);
   const [chatOpen, setChatOpen] = useState(false);
   // Chat is scoped to the blueprint currently open; keyed by plan id so switching
   // blueprints in the sidebar doesn't leak one conversation into another.
@@ -206,6 +209,10 @@ export default function PlanPage() {
     let currentDoc = "prd";
     const collected: Record<string, string> = { prd: "", spec: "", plan: "", tasks: "" };
     const DOC_MARKER = /<!-- DOC:(\w+) -->/g;
+    // Max length of a `<!-- DOC:xxxx -->` marker. We only need to hold this
+    // many trailing characters in the buffer to guard against a marker being
+    // split across chunk boundaries.
+    const DOC_MARKER_LEN = 32;
     // Emit content from `s` into `collected`, splitting on markers. Returns the
     // text AFTER the last marker (may contain a marker split across chunks).
     const DOC_ORDER = ["prd", "spec", "plan", "tasks"] as const;
@@ -216,8 +223,10 @@ export default function PlanPage() {
         next[name] = idx < i ? "done" : idx === i ? "writing" : "pending";
       });
       setDocStatus(next);
-      setActiveDoc(d);
+      if (!manualDocRef.current) setActiveDoc(d);
     };
+    manualDocRef.current = false;
+    setDocStatus({ prd: "pending", spec: "pending", plan: "pending", tasks: "pending" });
     setStatusForDoc("prd");
     const processBuffer = (s: string): string => {
       DOC_MARKER.lastIndex = 0;
@@ -236,15 +245,24 @@ export default function PlanPage() {
       const { done, value } = await reader.read();
       if (done) break;
       buffer += decoder.decode(value, { stream: true });
-      // Keep the tail (could contain a marker split across chunks) in buffer;
-      // emit everything up to the last marker.
-      const tail = processBuffer(buffer);
-      buffer = tail;
+      // Process markers in the buffer, flushing everything before the last
+      // marker into `collected[currentDoc]`.
+      buffer = processBuffer(buffer);
+      // Keep only the last DOC_MARKER_LEN chars so a marker split across two
+      // chunks is not lost; flush the rest into the active doc so the preview
+      // streams live instead of appearing all at once at the end.
+      if (buffer.length > DOC_MARKER_LEN) {
+        const safe = buffer.slice(0, -DOC_MARKER_LEN);
+        collected[currentDoc] += safe;
+        buffer = buffer.slice(-DOC_MARKER_LEN);
+      }
       setDocs({ ...collected });
       partialRef.current = { markdown: collected.prd, docs: { ...collected } };
     }
     // Flush whatever remains (trailing content after the last marker, or a doc
     // whose marker never arrived).
+    // First re-scan the tail for markers that were held back across chunks.
+    buffer = processBuffer(buffer);
     if (buffer.trim()) collected[currentDoc] += buffer;
     setDocs({ ...collected });
     setDocStatus({ prd: "done", spec: "done", plan: "done", tasks: "done" });
@@ -834,8 +852,12 @@ export default function PlanPage() {
               activeDoc={activeDoc as PreviewDoc}
               multiMode={multiMode && !compareColumns}
               docs={docs}
-              onSelectDoc={(doc) => setActiveDoc(doc)}
+              onSelectDoc={(doc) => {
+                manualDocRef.current = true;
+                setActiveDoc(doc);
+              }}
               progress={loading && multiMode && !compareColumns && Object.keys(docStatus).length > 0 ? docStatus : undefined}
+              isGenerating={loading && multiMode && !compareColumns}
               statusText={
                 loading
                   ? "Menulis dokumen..."
@@ -875,6 +897,20 @@ export default function PlanPage() {
                   onChange={(e) => setEditDraft(e.target.value)}
                   className="h-full min-h-[300px] resize-none font-mono text-xs"
                 />
+              ) : loading && multiMode && docStatus[activeDoc] !== "done" && !docs[activeDoc]?.trim() ? (
+                <div className="flex h-full min-h-[300px] flex-col items-center justify-center gap-3 p-8 text-center">
+                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                  <p className="text-sm font-medium text-foreground">
+                    {docStatus[activeDoc] === "writing"
+                      ? `Menulis ${activeDoc.toUpperCase()}...`
+                      : `Menunggu ${activeDoc.toUpperCase()}...`}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {docStatus[activeDoc] === "writing"
+                      ? "Isi dokumen akan muncul di sini saat model mulai menulis."
+                      : "Dokumen ini ditulis setelah dokumen sebelumnya selesai."}
+                  </p>
+                </div>
               ) : displayedMarkdown || (multiMode && docs[activeDoc]) ? (
                 <Markdown content={multiMode && docs[activeDoc] ? docs[activeDoc] : displayedMarkdown} />
               ) : (
