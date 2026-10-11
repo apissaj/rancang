@@ -465,8 +465,8 @@ export default function PlanPage() {
         <SyncIndicator status={sync.status} active={sync.active} />
       </div>
 
-      <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-auto p-4 lg:flex-row lg:overflow-hidden lg:px-6 lg:pb-6 lg:pt-0">
-        <div className="flex min-h-0 flex-col gap-3 lg:w-1/3 lg:overflow-y-auto">
+      <div className="thin-scrollbar flex min-h-0 flex-1 flex-col gap-4 overflow-auto p-4 lg:flex-row lg:overflow-hidden lg:px-6 lg:pb-6 lg:pt-0">
+        <div className="thin-scrollbar flex min-h-0 flex-col gap-3 lg:w-1/3 lg:overflow-y-auto">
           <div className="flex h-14 shrink-0 items-center border-b px-4">
             <h1 className="text-xl font-semibold tracking-tight">Jelaskan ide kamu</h1>
           </div>
@@ -500,7 +500,7 @@ export default function PlanPage() {
             value={idea}
             onChange={(e) => setIdea(e.target.value)}
             placeholder={`mis. "${TEMPLATES[0].idea}"\n\nIde lain:\n- ${TEMPLATES[1].idea}\n- ${TEMPLATES[2].idea}`}
-            className={`h-44 resize-none overflow-y-auto ${clarify ? "hidden" : ""}`}
+            className={`thin-scrollbar h-44 resize-none overflow-y-auto ${clarify ? "hidden" : ""}`}
           />
           {idea.length > 0 && !clarify && (
             <p className="-mt-1 text-right text-xs text-muted-foreground">
