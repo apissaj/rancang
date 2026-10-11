@@ -1,10 +1,10 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { ChevronDown, ChevronRight, FileCheck2, FileCode2, FileCog, FileText, Loader2, Palette } from "lucide-react";
+import { ChevronDown, ChevronRight, FileCheck2, FileCode2, FileCog, FileText, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export const PREVIEW_DOCS = ["prd", "spec", "plan", "tasks", "design"] as const;
+export const PREVIEW_DOCS = ["prd", "spec", "plan", "tasks"] as const;
 export type PreviewDoc = (typeof PREVIEW_DOCS)[number];
 
 const DOC_FILE: Record<PreviewDoc, { name: string; icon: typeof FileText }> = {
@@ -12,7 +12,6 @@ const DOC_FILE: Record<PreviewDoc, { name: string; icon: typeof FileText }> = {
   spec: { name: "SPEC.md", icon: FileCode2 },
   plan: { name: "PLAN.md", icon: FileCheck2 },
   tasks: { name: "TASKS.md", icon: FileCog },
-  design: { name: "DESIGN.md", icon: Palette },
 };
 
 const wordCount = (text: string) => text.trim().split(/\s+/).filter(Boolean).length;
