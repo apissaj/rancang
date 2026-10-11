@@ -1,6 +1,6 @@
 "use client";
 
-import { FileText, History, Trash2 } from "lucide-react";
+import { FileText, History, Plus, Trash2 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import type { PlanRecord } from "@/lib/storage";
@@ -31,22 +31,36 @@ export function PlanSidebar({
   activeId,
   onSelect,
   onDelete,
+  onNew,
 }: {
   plans: PlanRecord[];
   activeId: string | null;
   onSelect: (id: string) => void;
   onDelete?: (id: string) => void;
+  onNew?: () => void;
 }) {
   return (
     <div className="flex w-full shrink-0 flex-col border-b bg-muted/20 lg:h-full lg:w-64 lg:border-b-0 lg:border-r">
-      <div className="flex items-center justify-between border-b px-3 py-2.5">
+      <div className="flex items-center justify-between border-b px-3 py-2">
         <span className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           <History className="h-3.5 w-3.5" />
           Riwayat
         </span>
-        <span className="rounded-sm border bg-background px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
-          {plans.length}
-        </span>
+        <div className="flex items-center gap-1.5">
+          <span className="rounded-sm border bg-background px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+            {plans.length}
+          </span>
+          {onNew && (
+            <button
+              onClick={onNew}
+              className="flex items-center gap-1 rounded-md border bg-background px-1.5 py-0.5 text-[10px] font-medium text-foreground transition-colors hover:bg-muted"
+              title="Buat PRD baru"
+            >
+              <Plus className="h-3 w-3" />
+              Baru
+            </button>
+          )}
+        </div>
       </div>
       <ScrollArea className="h-40 lg:h-[calc(100%-2.75rem)]">
         <div className="flex flex-col gap-1 px-2 py-2">

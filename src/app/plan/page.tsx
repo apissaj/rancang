@@ -501,6 +501,23 @@ export default function PlanPage() {
 
   const activePlan = activeId ? plans.find((p) => p.id === activeId) ?? null : null;
 
+  const startNewPlan = () => {
+    setActiveId(null);
+    setIdea("");
+    setMarkdown("");
+    setDocs({});
+    setDocStatus({});
+    setMcpBlueprintId(null);
+    setMcpCopied(false);
+    setError(null);
+    setClarify(null);
+    setCompareColumns(null);
+    setEditing(false);
+    setChatOpen(false);
+    setActiveDoc("prd");
+    manualDocRef.current = false;
+  };
+
   const handleDelete = (id: string) => {
     const removed = plans.find((p) => p.id === id);
     planStore.remove(id);
@@ -673,7 +690,13 @@ export default function PlanPage() {
     <AuthGate>
     <div className="flex flex-1 flex-col overflow-hidden lg:h-[calc(100dvh-3.5rem)] lg:flex-none lg:flex-row">
       <div className="flex min-h-0 flex-col">
-        <PlanSidebar plans={plans} activeId={activeId} onSelect={loadPlan} onDelete={handleDelete} />
+        <PlanSidebar
+          plans={plans}
+          activeId={activeId}
+          onSelect={loadPlan}
+          onDelete={handleDelete}
+          onNew={startNewPlan}
+        />
         <SyncIndicator status={sync.status} active={sync.active} />
       </div>
 
