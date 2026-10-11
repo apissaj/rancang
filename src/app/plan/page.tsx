@@ -159,7 +159,7 @@ export default function PlanPage() {
     let buffer = "";
     let currentDoc = "prd";
     const collected: Record<string, string> = { prd: "", spec: "", plan: "", tasks: "" };
-    const DOC_MARKER = /<!-- DOC:(\w+) -->/g;
+    const DOC_MARKER = /<!-- (\/)?DOC:(\w+) -->/g;
     // Max length of a `<!-- DOC:xxxx -->` marker. We only need to hold this
     // many trailing characters in the buffer to guard against a marker being
     // split across chunk boundaries.
@@ -185,9 +185,19 @@ export default function PlanPage() {
       let m: RegExpExecArray | null;
       while ((m = DOC_MARKER.exec(s)) !== null) {
         const before = s.slice(pos, m.index);
-        if (before) collected[currentDoc] += before;
-        currentDoc = m[1];
-        setStatusForDoc(currentDoc);
+        if (m[1] === "/") {
+          if (!(m[2] in collected)) {
+            pos = m.index + m[0].length;
+            continue;
+          }
+          const closing = m[2] as keyof typeof collected;
+          if (before) collected[closing] += before;
+          setDocStatus((prev) => ({ ...prev, [closing]: "done" }));
+        } else {
+          if (before) collected[currentDoc] += before;
+          currentDoc = m[2];
+          setStatusForDoc(currentDoc);
+        }
         pos = m.index + m[0].length;
       }
       return s.slice(pos);

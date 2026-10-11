@@ -173,6 +173,7 @@ export async function POST(req: Request) {
                 `\n> **[generate error — ${doc}]** ${msg}\n\n_Retry this document, or pick a different model._\n`
               )
             );
+            controller.enqueue(encoder.encode(`\n\n<!-- /DOC:${doc} -->\n\n`));
             continue;
           }
           if (chars === 0) {
@@ -182,6 +183,7 @@ export async function POST(req: Request) {
               )
             );
           }
+          controller.enqueue(encoder.encode(`\n\n<!-- /DOC:${doc} -->\n\n`));
         }
         controller.close();
       },
