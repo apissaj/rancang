@@ -157,6 +157,9 @@ export default function PlanPage() {
     const reader = res.body.getReader();
     const decoder = new TextDecoder();
     let buffer = "";
+    // Docs can interleave on the server, so routing follows the open set: the
+    // next bytes belong to the most recently opened doc that has not closed yet.
+    const openOrder: string[] = [];
     let currentDoc = "prd";
     const collected: Record<string, string> = { prd: "", spec: "", plan: "", tasks: "" };
     const DOC_MARKER = /<!-- (\/)?DOC:(\w+) -->/g;
@@ -164,39 +167,40 @@ export default function PlanPage() {
     // many trailing characters in the buffer to guard against a marker being
     // split across chunk boundaries.
     const DOC_MARKER_LEN = 32;
-    // Emit content from `s` into `collected`, splitting on markers. Returns the
-    // text AFTER the last marker (may contain a marker split across chunks).
-    const DOC_ORDER = ["prd", "spec", "plan", "tasks"] as const;
-    const setStatusForDoc = (d: string) => {
-      const i = DOC_ORDER.indexOf(d as (typeof DOC_ORDER)[number]);
-      const next: Record<string, DocStatus> = {};
-      DOC_ORDER.forEach((name, idx) => {
-        next[name] = idx < i ? "done" : idx === i ? "writing" : "pending";
-      });
-      setDocStatus(next);
-      if (!manualDocRef.current) setActiveDoc(d);
-    };
     manualDocRef.current = false;
     setDocStatus({ prd: "pending", spec: "pending", plan: "pending", tasks: "pending" });
-    setStatusForDoc("prd");
+    // Docs interleave chunk-by-chunk, so auto-follow only the first time a doc
+    // opens; otherwise the active tab would flip on every chunk.
+    const opened = new Set<string>();
+    const markWriting = (d: string) => {
+      setDocStatus((prev) => ({ ...prev, [d]: "writing" }));
+      if (!opened.has(d)) {
+        opened.add(d);
+        if (!manualDocRef.current) setActiveDoc(d);
+      }
+    };
+    // Emit content from `s` into `collected`, splitting on markers. Returns the
+    // text AFTER the last marker (may contain a marker split across chunks).
     const processBuffer = (s: string): string => {
       DOC_MARKER.lastIndex = 0;
       let pos = 0;
       let m: RegExpExecArray | null;
       while ((m = DOC_MARKER.exec(s)) !== null) {
         const before = s.slice(pos, m.index);
-        if (m[1] === "/") {
-          if (!(m[2] in collected)) {
-            pos = m.index + m[0].length;
-            continue;
+        if (before) collected[currentDoc] += before;
+        const closing = m[1] === "/";
+        const name = m[2];
+        if (closing) {
+          if (name in collected) {
+            const idx = openOrder.lastIndexOf(name);
+            if (idx !== -1) openOrder.splice(idx, 1);
+            currentDoc = openOrder.length > 0 ? openOrder[openOrder.length - 1] : currentDoc;
+            setDocStatus((prev) => ({ ...prev, [name]: "done" }));
           }
-          const closing = m[2] as keyof typeof collected;
-          if (before) collected[closing] += before;
-          setDocStatus((prev) => ({ ...prev, [closing]: "done" }));
-        } else {
-          if (before) collected[currentDoc] += before;
-          currentDoc = m[2];
-          setStatusForDoc(currentDoc);
+        } else if (name in collected) {
+          openOrder.push(name);
+          currentDoc = name;
+          markWriting(name);
         }
         pos = m.index + m[0].length;
       }
