@@ -5,6 +5,7 @@ import Link from "next/link";
 import { nanoid } from "nanoid";
 import { Check, Copy, FileText, Loader2, ChevronDown, Bookmark, Palette } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -53,6 +54,10 @@ export default function PlanPage() {
 
   const [models, setModels] = useState<string[]>([]);
   const [model, setModel] = useState("");
+  const modelRef = useRef(model);
+  useEffect(() => {
+    modelRef.current = model;
+  }, [model]);
   const [modelError, setModelError] = useState(false);
   const [docStatus, setDocStatus] = useState<Record<string, DocStatus>>({});
   const multiMode = true;
@@ -218,7 +223,6 @@ export default function PlanPage() {
 
   const generatePrd = async (answers?: Answer[]) => {
     setError(null);
-    setActiveId(null);
     setMcpBlueprintId(null);
     setMcpCopied(false);
     setClarify(null);
@@ -290,7 +294,7 @@ export default function PlanPage() {
           id: mcpIds.current[record.id],
           title: record.title,
           idea: record.idea,
-          model: model,
+          model: modelRef.current,
           docs: record.docs,
         }),
       });
@@ -395,6 +399,10 @@ export default function PlanPage() {
   };
 
   const loadPlan = (id: string) => {
+    if (loading) {
+      setNotice("Tunggu pembuatan PRD selesai sebelum membuka PRD lain.");
+      return;
+    }
     const plan = plans.find((p) => p.id === id);
     if (!plan) return;
     setActiveId(id);
@@ -479,6 +487,11 @@ export default function PlanPage() {
           <p className="px-4 text-sm text-muted-foreground">
             Dapatkan PRD terstruktur dengan tujuan, kebutuhan, dan rincian task langkah demi langkah.
           </p>
+          {activePlan && !clarify && (
+            <p className="px-4 text-xs text-muted-foreground">
+              Sedang membuka: <span className="truncate font-medium text-foreground">{activePlan.title}</span>
+            </p>
+          )}
 
           <div className="flex items-center gap-2 rounded-lg border bg-background/60 p-2.5">
             <Label htmlFor="model-select" className="text-sm text-muted-foreground">Model AI</Label>
@@ -566,7 +579,12 @@ export default function PlanPage() {
             </Button>
           )}
           {(loading || clarifying) && (
-            <Button variant="outline" onClick={cancelGenerate} className="w-full">
+            <Button
+              variant="outline"
+              onClick={cancelGenerate}
+              className="w-full"
+              title="Hentikan pembuatan. Dokumen yang sudah selesai akan tetap disimpan sebagai draft."
+            >
               Batal
             </Button>
           )}
@@ -608,6 +626,11 @@ export default function PlanPage() {
             }
             actions={
               <>
+                {activePlan && !loading && (
+                  <span className={cn("text-xs", mcpBlueprintId ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground")}>
+                    {mcpBlueprintId ? "MCP: terkirim" : "MCP: belum terkirim"}
+                  </span>
+                )}
                 {mcpBlueprintId && (
                   <Button
                     variant="outline"
@@ -659,6 +682,9 @@ export default function PlanPage() {
                   <p className="text-sm font-medium text-foreground">Pratinjau PRD</p>
                   <p className="mt-1 text-sm text-muted-foreground">
                     PRD yang kamu buat akan tampil di sini.
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Mulai dari kolom kiri, lalu klik Buat PRD.
                   </p>
                 </div>
               </div>
