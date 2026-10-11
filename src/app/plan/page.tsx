@@ -445,7 +445,7 @@ export default function PlanPage() {
 
       <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-auto p-4 lg:flex-row lg:overflow-hidden lg:px-6 lg:pb-6 lg:pt-0">
         <div className="flex min-h-0 flex-col gap-3 lg:w-1/3 lg:overflow-y-auto">
-          <div className="flex h-14 shrink-0 items-center border-b">
+          <div className="flex h-14 shrink-0 items-center border-b px-4">
             <h1 className="text-xl font-semibold tracking-tight">Jelaskan ide kamu</h1>
           </div>
           <p className="text-sm text-muted-foreground">
@@ -454,9 +454,9 @@ export default function PlanPage() {
 
           <div className="flex items-center gap-2 rounded-lg border bg-background/60 p-2.5">
             <Label htmlFor="model-select" className="text-sm text-muted-foreground">Model</Label>
-            <Select value={model} onValueChange={(v) => v && setModel(v)}>
+            <Select value={model} onValueChange={(v) => v && setModel(v)} disabled={models.length === 0}>
               <SelectTrigger id="model-select" className="h-8 min-w-0 flex-1">
-                <SelectValue />
+                <SelectValue placeholder="Memuat model..." />
               </SelectTrigger>
               <SelectContent>
                 {models.map((m) => (
@@ -466,7 +466,7 @@ export default function PlanPage() {
             </Select>
           </div>
           {modelError && (
-            <div className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive">
+            <div className="rounded-md border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
               Gagal memuat daftar model. Coba refresh halaman atau periksa koneksi.
             </div>
           )}
@@ -481,7 +481,7 @@ export default function PlanPage() {
             className={`min-h-[180px] resize-none [field-sizing:fixed] ${clarify ? "hidden" : ""}`}
           />
           {!clarify && (
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <DropdownMenu>
                 <DropdownMenuTrigger
                   render={
@@ -514,12 +514,18 @@ export default function PlanPage() {
                   atau tulis ide kamu sendiri di atas
                 </span>
               )}
+              {idea.length > 0 && (
+                <span className="text-xs text-muted-foreground text-right">
+                  {idea.length} / 10.000 karakter
+                </span>
+              )}
             </div>
           )}
           {!clarify && (
             <Button
               onClick={startGenerate}
               disabled={loading || clarifying || !idea.trim()}
+              title={idea.trim() ? undefined : "Tulis ide terlebih dahulu"}
               className="w-full"
             >
               {(loading || clarifying) && <Loader2 className="h-4 w-4 animate-spin" />}
@@ -609,23 +615,9 @@ export default function PlanPage() {
                 <div>
                   <p className="text-sm font-medium text-foreground">Pratinjau PRD</p>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    PRD yang kamu buat akan tampil di sini secara langsung.
+                    PRD yang kamu buat akan tampil di sini.
                   </p>
                 </div>
-                <ol className="mt-2 flex w-full max-w-xs flex-col gap-2 text-left">
-                  {[
-                    "Tulis ide atau pilih salah satu template",
-                    "Jawab pertanyaan klarifikasi bila muncul",
-                    "Dapatkan PRD, spec, plan, dan tasks",
-                  ].map((step, i) => (
-                    <li key={step} className="flex items-start gap-2.5 text-sm text-muted-foreground">
-                      <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-foreground/20 text-xs font-semibold">
-                        {i + 1}
-                      </span>
-                      <span>{step}</span>
-                    </li>
-                  ))}
-                </ol>
               </div>
             )}
           </PreviewWindow>
