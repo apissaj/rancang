@@ -45,7 +45,7 @@ export type BlueprintChatMessage = {
   appliedDoc?: string;
 };
 
-const PLAN_LIMIT = 5;
+const PLAN_LIMIT = 20;
 
 // Storage is namespaced per identity so anonymous and logged-in users (and different
 // logged-in users sharing a browser) never see each other's chats/plans. Scope defaults
