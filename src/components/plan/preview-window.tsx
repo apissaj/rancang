@@ -45,6 +45,7 @@ export function PreviewWindow({
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const stickRef = useRef(true);
+  const lastTopRef = useRef(0);
   useEffect(() => {
     stickRef.current = true;
   }, [followTail, activeDoc]);
@@ -52,11 +53,19 @@ export function PreviewWindow({
     const el = scrollRef.current;
     if (!followTail || !stickRef.current || !el) return;
     el.scrollTop = el.scrollHeight;
+    lastTopRef.current = el.scrollTop;
   }, [followTail, tailKey]);
   const handleScroll = () => {
     const el = scrollRef.current;
     if (!el) return;
-    stickRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 40;
+    const top = el.scrollTop;
+    const nearBottom = el.scrollHeight - top - el.clientHeight < 80;
+    if (nearBottom) {
+      stickRef.current = true;
+    } else if (top < lastTopRef.current - 2) {
+      stickRef.current = false;
+    }
+    lastTopRef.current = top;
   };
   const current = DOC_FILE[activeDoc];
   const hasAnyDoc = PREVIEW_DOCS.some((d) => !!docs[d]?.trim());
