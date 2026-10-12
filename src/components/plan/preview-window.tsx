@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import { ChevronDown, ChevronRight, FileCheck2, FileCode2, FileCog, FileText, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -27,6 +27,8 @@ export function PreviewWindow({
   statusText,
   progress,
   isGenerating = false,
+  followTail = false,
+  tailKey = 0,
   children,
 }: {
   activeDoc: PreviewDoc;
@@ -37,8 +39,25 @@ export function PreviewWindow({
   statusText: string;
   progress?: Partial<Record<PreviewDoc, DocState>>;
   isGenerating?: boolean;
+  followTail?: boolean;
+  tailKey?: number;
   children: ReactNode;
 }) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const stickRef = useRef(true);
+  useEffect(() => {
+    stickRef.current = true;
+  }, [followTail, activeDoc]);
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!followTail || !stickRef.current || !el) return;
+    el.scrollTop = el.scrollHeight;
+  }, [followTail, tailKey]);
+  const handleScroll = () => {
+    const el = scrollRef.current;
+    if (!el) return;
+    stickRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 40;
+  };
   const current = DOC_FILE[activeDoc];
   const hasAnyDoc = PREVIEW_DOCS.some((d) => !!docs[d]?.trim());
   const progressDocs = PREVIEW_DOCS.filter((doc) => progress?.[doc]);
@@ -158,7 +177,7 @@ export function PreviewWindow({
             {actions && (
             <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 border-b px-4 py-2">{actions}</div>
           )}
-          <div className="thin-scrollbar min-h-0 flex-1 overflow-auto p-5">{children}</div>
+          <div ref={scrollRef} onScroll={handleScroll} className="thin-scrollbar min-h-0 flex-1 overflow-auto p-5">{children}</div>
         </div>
       </div>
 

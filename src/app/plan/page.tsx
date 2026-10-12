@@ -685,6 +685,8 @@ export default function PlanPage() {
             }}
             progress={typing ? displayStatus : undefined}
             isGenerating={typing}
+            followTail={typing}
+            tailKey={activeContent.length + typeCursor.idx * 1000000}
             statusText={
               typing
                 ? "Menulis dokumen..."
