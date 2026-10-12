@@ -735,15 +735,10 @@ export default function PlanPage() {
                 </p>
               </div>
             ) : activeContent ? (
-              <>
-                <Markdown content={activeContent} />
-                {typing && activeStatus === "writing" && (
-                  <span
-                    className="ml-0.5 inline-block h-4 w-[2px] animate-pulse rounded bg-foreground align-middle"
-                    aria-hidden="true"
-                  />
-                )}
-              </>
+              <Markdown
+                content={activeContent}
+                cursor={typing && activeStatus === "writing"}
+              />
             ) : (
               <div className="flex h-full min-h-[300px] flex-col items-center justify-center gap-4 p-8 text-center">
                 <div className="flex size-14 items-center justify-center rounded-lg border bg-muted/30">

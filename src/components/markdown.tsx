@@ -16,11 +16,15 @@ function splitFrontMatter(content: string): { front: string | null; body: string
   return { front, body };
 }
 
-export function Markdown({ content }: { content: string }) {
+export function Markdown({ content, cursor = false }: { content: string; cursor?: boolean }) {
   const { front, body } = splitFrontMatter(content);
 
   return (
-    <div className="prose prose-sm dark:prose-invert max-w-none prose-pre:bg-muted prose-pre:text-foreground">
+    <div
+      className={`prose prose-sm dark:prose-invert max-w-none prose-pre:bg-muted prose-pre:text-foreground${
+        cursor ? " typing-cursor" : ""
+      }`}
+    >
       {front && (
         <pre className="mb-4 overflow-x-auto rounded-lg border bg-muted/60 p-3 font-mono text-xs leading-relaxed text-foreground">
           {front}
