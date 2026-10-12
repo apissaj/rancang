@@ -83,27 +83,36 @@ export function ClarifyQuestions({
                 </div>
               )}
               {noteVisible && (
-                              <Input
-                                placeholder="Tambah detail..."
-                                aria-label={`Catatan tambahan untuk: ${q.question}`}
-                                value={answers[q.id]?.note ?? ""}
-                                onChange={(e) => setNote(q.id, e.target.value)}
-                                className="mt-1"
-                              />
-                            )}
+                <Input
+                  placeholder="Tambah detail..."
+                  aria-label={`Catatan tambahan untuk: ${q.question}`}
+                  value={answers[q.id]?.note ?? ""}
+                  onChange={(e) => setNote(q.id, e.target.value)}
+                  className="mt-1"
+                />
+              )}
             </CardContent>
           </Card>
         );
       })}
 
-      <div className="flex items-center gap-3 pt-1">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 pt-1">
         <Button onClick={() => onSubmit(answers)} disabled={!allAnswered || submitting}>
           {submitting ? "Membuat..." : "Buat PRD"}
         </Button>
-        <Button variant="link" size="sm" onClick={onSkip} disabled={submitting}>
+        <Button
+          variant="link"
+          size="sm"
+          onClick={onSkip}
+          disabled={submitting}
+          className="h-auto min-w-0 whitespace-normal py-1 text-left"
+        >
           Lewati pertanyaan, langsung buat
         </Button>
       </div>
+      {!allAnswered && (
+        <p className="text-xs text-muted-foreground">Jawab semua pertanyaan untuk melanjutkan, atau lewati.</p>
+      )}
     </div>
   );
 }

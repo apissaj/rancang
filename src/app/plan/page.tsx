@@ -62,11 +62,10 @@ export default function PlanPage() {
   }, [model]);
   const [modelError, setModelError] = useState(false);
   const [docStatus, setDocStatus] = useState<Record<string, DocStatus>>({});
-  const multiMode = true;
   const [docs, setDocs] = useState<Record<string, string>>({});
   const [typeCursor, setTypeCursor] = useState({ idx: 0, shown: 0 });
   const [typingActive, setTypingActive] = useState(false);
-  const typing = (loading || typingActive) && multiMode && typeCursor.idx < PREVIEW_DOCS.length;
+  const typing = (loading || typingActive) && typeCursor.idx < PREVIEW_DOCS.length;
   const typeCursorRef = useRef(typeCursor);
   const docsRef = useRef(docs);
   const docStatusRef = useRef(docStatus);
@@ -677,7 +676,6 @@ export default function PlanPage() {
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden lg:w-2/3">
           <PreviewWindow
             activeDoc={activeDoc as PreviewDoc}
-            multiMode={multiMode}
             docs={displayedDocs}
             onSelectDoc={(doc) => {
               manualDocRef.current = true;

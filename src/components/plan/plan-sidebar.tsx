@@ -43,19 +43,19 @@ export function PlanSidebar({
   return (
     <div className="flex w-full shrink-0 flex-col border-b bg-muted/20 lg:h-full lg:w-72 lg:border-b-0 lg:border-r">
       <AppNav />
-      <div className="flex h-14 shrink-0 items-center justify-between px-3 border-b">
-        <span className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          <History className="h-3.5 w-3.5" />
-          Riwayat
+      <div className="flex h-14 shrink-0 items-center justify-between gap-2 px-3 border-b">
+        <span className="flex min-w-0 items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          <History className="h-3.5 w-3.5 shrink-0" />
+          <span className="truncate">Riwayat</span>
         </span>
-        <div className="flex items-center gap-1.5">
-          <span className="rounded-sm border bg-background px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+        <div className="flex shrink-0 items-center gap-1.5">
+          <span className="shrink-0 rounded-sm border bg-background px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
             {plans.length}
           </span>
           {onNew && (
             <button
               onClick={onNew}
-              className="flex items-center gap-1 rounded-md border bg-background px-1.5 py-0.5 text-[10px] font-medium text-foreground transition-colors hover:bg-muted"
+              className="flex shrink-0 items-center gap-1 whitespace-nowrap rounded-md border bg-background px-1.5 py-0.5 text-[10px] font-medium text-foreground transition-colors hover:bg-muted"
               title="Buat PRD baru"
             >
               <Plus className="h-3 w-3" />

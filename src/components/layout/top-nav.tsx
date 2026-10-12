@@ -50,11 +50,55 @@ function Brand() {
   );
 }
 
-// Sidebar header for app pages (logo only)
+function NavSheet({ active }: { active: (href: string) => boolean }) {
+  return (
+    <Sheet>
+      <SheetTrigger
+        render={
+          <Button variant="ghost" size="icon" aria-label="Buka menu" className="rounded-lg">
+            <Menu className="h-4 w-4" />
+          </Button>
+        }
+      />
+      <SheetContent side="right" className="flex flex-col justify-between">
+        <div>
+          <SheetHeader className="text-left">
+            <SheetTitle className="flex items-center gap-2 text-base">
+              <Hammer className="h-4 w-4" />
+              Rancang
+            </SheetTitle>
+          </SheetHeader>
+          <nav className="mt-6 flex flex-col gap-1">
+            {links.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className={cn(
+                  "rounded-lg px-3 py-2 text-sm font-medium outline-none transition-colors hover:bg-muted hover:text-foreground",
+                  active(link.href) && "bg-muted text-foreground"
+                )}
+              >
+                {link.label}
+              </Link>
+            ))}
+          </nav>
+        </div>
+        <div className="border-t border-border pt-4">
+          <AuthButton />
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
+}
+
+// Sidebar header for app pages (logo + mobile menu)
 export function AppNav() {
+  const pathname = usePathname();
+  const active = (href: string) => pathname.startsWith(href);
+
   return (
     <div className="flex flex-col">
-      <div className="flex h-14 shrink-0 items-center border-b px-4">
+      <div className="flex h-14 shrink-0 items-center justify-between border-b px-4">
         <Link
           href="/"
           className="flex items-center gap-2.5 text-2xl font-semibold tracking-tight transition-opacity hover:opacity-80"
@@ -62,6 +106,9 @@ export function AppNav() {
           <Hammer className="h-7 w-7" />
           Rancang
         </Link>
+        <div className="lg:hidden">
+          <NavSheet active={active} />
+        </div>
       </div>
     </div>
   );
@@ -82,42 +129,7 @@ function MobileMenu({ active, theme = true }: { active: (href: string) => boolea
   return (
     <div className="flex items-center gap-1 md:hidden">
       {theme && <ThemeToggle />}
-      <Sheet>
-        <SheetTrigger
-          render={
-            <Button variant="ghost" size="icon" aria-label="Buka menu" className="rounded-lg">
-              <Menu className="h-4 w-4" />
-            </Button>
-          }
-        />
-        <SheetContent side="right" className="flex flex-col justify-between">
-          <div>
-            <SheetHeader className="text-left">
-              <SheetTitle className="flex items-center gap-2 text-base">
-                <Hammer className="h-4 w-4" />
-                Rancang
-              </SheetTitle>
-            </SheetHeader>
-            <nav className="mt-6 flex flex-col gap-1">
-              {links.map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className={cn(
-                    "rounded-lg px-3 py-2 text-sm font-medium outline-none transition-colors hover:bg-muted hover:text-foreground",
-                    active(link.href) && "bg-muted text-foreground"
-                  )}
-                >
-                  {link.label}
-                </Link>
-              ))}
-            </nav>
-          </div>
-          <div className="border-t border-border pt-4">
-            <AuthButton />
-          </div>
-        </SheetContent>
-      </Sheet>
+      <NavSheet active={active} />
     </div>
   );
 }
