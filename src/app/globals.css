@@ -153,17 +153,16 @@
   .thin-scrollbar::-webkit-scrollbar-thumb:hover {
     background: var(--muted-foreground);
   }
-  .typing-cursor > :last-child::after {
-    content: "";
+  .typing-caret {
     display: inline-block;
     width: 2px;
     height: 1em;
     margin-left: 2px;
     vertical-align: text-bottom;
     background: var(--foreground);
-    animation: typing-cursor-blink 1s steps(1) infinite;
+    animation: typing-caret-blink 1s steps(1) infinite;
   }
-  @keyframes typing-cursor-blink {
+  @keyframes typing-caret-blink {
     50% {
       opacity: 0;
     }
