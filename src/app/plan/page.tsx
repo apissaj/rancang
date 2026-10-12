@@ -5,7 +5,6 @@ import Link from "next/link";
 import { nanoid } from "nanoid";
 import { Check, Copy, FileText, Loader2, ChevronDown, Bookmark, Palette } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -640,11 +639,6 @@ export default function PlanPage() {
             }
             actions={
               <>
-                {activePlan && !loading && (
-                  <span className={cn("text-xs", mcpBlueprintId ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground")}>
-                    {mcpBlueprintId ? "MCP: terkirim" : "MCP: belum terkirim"}
-                  </span>
-                )}
                 {mcpBlueprintId && (
                   <Button
                     variant="outline"
