@@ -25,6 +25,7 @@ import { useSync } from "@/lib/use-sync";
 import { useAuth } from "@/components/auth-provider";
 import { SyncIndicator } from "@/components/sync-indicator";
 import { AuthGate } from "@/components/auth-gate";
+import { useTypedText } from "@/hooks/use-typed-text";
 
 const TEMPLATES = [
   { label: "SaaS Dashboard", idea: "Dashboard SaaS analytics di mana user melihat metrik bisnis real-time, membuat laporan otomatis, dan mengundang anggota tim dengan role berbeda." },
@@ -477,6 +478,8 @@ export default function PlanPage() {
   };
 
   const activeContent = docs[activeDoc] || "";
+  const isWriting = loading && multiMode && docStatus[activeDoc] === "writing" && !!docs[activeDoc]?.trim();
+  const typedContent = useTypedText(activeContent, isWriting);
 
   return (
     <AuthGate>
@@ -680,7 +683,15 @@ export default function PlanPage() {
                 </p>
               </div>
             ) : activeContent ? (
-              <Markdown content={activeContent} />
+              <>
+                <Markdown content={isWriting ? typedContent : activeContent} />
+                {isWriting && (
+                  <span
+                    className="ml-0.5 inline-block h-4 w-[2px] animate-pulse rounded bg-foreground align-middle"
+                    aria-hidden="true"
+                  />
+                )}
+              </>
             ) : (
               <div className="flex h-full min-h-[300px] flex-col items-center justify-center gap-4 p-8 text-center">
                 <div className="flex size-14 items-center justify-center rounded-lg border bg-muted/30">
