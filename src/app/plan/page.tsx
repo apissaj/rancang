@@ -17,7 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Markdown } from "@/components/markdown";
 import { PlanSidebar } from "@/components/plan/plan-sidebar";
 import { ClarifyQuestions, type QuestionAnswers } from "@/components/plan/clarify-questions";
-import { PreviewWindow, type PreviewDoc } from "@/components/plan/preview-window";
+import { PREVIEW_DOCS, PreviewWindow, type PreviewDoc } from "@/components/plan/preview-window";
 import { toastManager } from "@/components/ui/toast";
 import { planStore, type PlanRecord } from "@/lib/storage";
 import type { ClarifyResponse } from "@/lib/clarify-types";
@@ -39,6 +39,24 @@ const TEMPLATES = [
 ];
 
 type DocStatus = "pending" | "writing" | "done";
+
+function deriveDisplayStatus(raw: Record<string, DocStatus>, loading: boolean): Record<PreviewDoc, DocStatus> {
+  const out = {} as Record<PreviewDoc, DocStatus>;
+  let writingSeen = false;
+  for (const doc of PREVIEW_DOCS) {
+    if (!loading) {
+      out[doc] = "done";
+    } else if (!writingSeen && raw[doc] === "done") {
+      out[doc] = "done";
+    } else if (!writingSeen) {
+      out[doc] = "writing";
+      writingSeen = true;
+    } else {
+      out[doc] = "pending";
+    }
+  }
+  return out;
+}
 
 export default function PlanPage() {
   const [idea, setIdea] = useState("");
@@ -169,15 +187,8 @@ export default function PlanPage() {
     const DOC_MARKER_LEN = 32;
     manualDocRef.current = false;
     setDocStatus({ prd: "pending", spec: "pending", plan: "pending", tasks: "pending" });
-    // Docs interleave chunk-by-chunk, so auto-follow only the first time a doc
-    // opens; otherwise the active tab would flip on every chunk.
-    const opened = new Set<string>();
     const markWriting = (d: string) => {
       setDocStatus((prev) => ({ ...prev, [d]: "writing" }));
-      if (!opened.has(d)) {
-        opened.add(d);
-        if (!manualDocRef.current) setActiveDoc(d);
-      }
     };
     // Emit content from `s` into `collected`, splitting on markers. Returns the
     // text AFTER the last marker (may contain a marker split across chunks).
@@ -477,9 +488,24 @@ export default function PlanPage() {
     });
   };
 
-  const activeContent = docs[activeDoc] || "";
-  const isWriting = loading && multiMode && docStatus[activeDoc] === "writing" && !!docs[activeDoc]?.trim();
-  const typedContent = useTypedText(activeContent, isWriting);
+  const displayStatus = deriveDisplayStatus(docStatus, loading);
+  const activeStatus: DocStatus | undefined = displayStatus[activeDoc as PreviewDoc];
+  const writingDoc = PREVIEW_DOCS.find((doc) => displayStatus[doc] === "writing") ?? null;
+
+  useEffect(() => {
+    if (!loading || !writingDoc || manualDocRef.current) return;
+    setActiveDoc(writingDoc);
+  }, [writingDoc, loading]);
+
+  const visibleDocs: Record<string, string> = { ...docs };
+  if (loading) {
+    for (const doc of PREVIEW_DOCS) {
+      if (displayStatus[doc] === "pending") delete visibleDocs[doc];
+    }
+  }
+
+  const activeContent = visibleDocs[activeDoc] || "";
+  const isWriting = loading && multiMode && activeStatus === "writing" && !!activeContent.trim();
 
   return (
     <AuthGate>
@@ -628,12 +654,12 @@ export default function PlanPage() {
           <PreviewWindow
             activeDoc={activeDoc as PreviewDoc}
             multiMode={multiMode}
-            docs={docs}
+            docs={visibleDocs}
             onSelectDoc={(doc) => {
               manualDocRef.current = true;
               setActiveDoc(doc);
             }}
-            progress={loading && multiMode && Object.keys(docStatus).length > 0 ? docStatus : undefined}
+            progress={loading && multiMode ? displayStatus : undefined}
             isGenerating={loading && multiMode}
             statusText={
               loading
@@ -668,30 +694,22 @@ export default function PlanPage() {
               </>
             }
           >
-            {loading && multiMode && docStatus[activeDoc] !== "done" && !docs[activeDoc]?.trim() ? (
+            {loading && multiMode && activeStatus !== "done" && !activeContent.trim() ? (
               <div className="flex h-full min-h-[300px] flex-col items-center justify-center gap-3 p-8 text-center">
                 <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
                 <p className="text-sm font-medium text-foreground">
-                  {docStatus[activeDoc] === "writing"
+                  {activeStatus === "writing"
                     ? `Menulis ${activeDoc.toUpperCase()}...`
                     : `Menunggu ${activeDoc.toUpperCase()}...`}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  {docStatus[activeDoc] === "writing"
+                  {activeStatus === "writing"
                     ? "Isi dokumen akan muncul di sini saat model mulai menulis."
                     : "Dokumen ini ditulis setelah dokumen sebelumnya selesai."}
                 </p>
               </div>
             ) : activeContent ? (
-              <>
-                <Markdown content={isWriting ? typedContent : activeContent} />
-                {isWriting && (
-                  <span
-                    className="ml-0.5 inline-block h-4 w-[2px] animate-pulse rounded bg-foreground align-middle"
-                    aria-hidden="true"
-                  />
-                )}
-              </>
+              <TypedDoc key={activeDoc} content={activeContent} active={isWriting} />
             ) : (
               <div className="flex h-full min-h-[300px] flex-col items-center justify-center gap-4 p-8 text-center">
                 <div className="flex size-14 items-center justify-center rounded-lg border bg-muted/30">
@@ -718,4 +736,17 @@ export default function PlanPage() {
 
 type Answer = { question: string; selected: string[]; note?: string };
 
-
+function TypedDoc({ content, active }: { content: string; active: boolean }) {
+  const typed = useTypedText(content, active);
+  return (
+    <>
+      <Markdown content={active ? typed : content} />
+      {active && (
+        <span
+          className="ml-0.5 inline-block h-4 w-[2px] animate-pulse rounded bg-foreground align-middle"
+          aria-hidden="true"
+        />
+      )}
+    </>
+  );
+}
