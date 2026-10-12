@@ -25,7 +25,6 @@ import { useSync } from "@/lib/use-sync";
 import { useAuth } from "@/components/auth-provider";
 import { SyncIndicator } from "@/components/sync-indicator";
 import { AuthGate } from "@/components/auth-gate";
-import { useTypedText } from "@/hooks/use-typed-text";
 
 const TEMPLATES = [
   { label: "SaaS Dashboard", idea: "Dashboard SaaS analytics di mana user melihat metrik bisnis real-time, membuat laporan otomatis, dan mengundang anggota tim dengan role berbeda." },
@@ -40,23 +39,8 @@ const TEMPLATES = [
 
 type DocStatus = "pending" | "writing" | "done";
 
-function deriveDisplayStatus(raw: Record<string, DocStatus>, loading: boolean): Record<PreviewDoc, DocStatus> {
-  const out = {} as Record<PreviewDoc, DocStatus>;
-  let writingSeen = false;
-  for (const doc of PREVIEW_DOCS) {
-    if (!loading) {
-      out[doc] = "done";
-    } else if (!writingSeen && raw[doc] === "done") {
-      out[doc] = "done";
-    } else if (!writingSeen) {
-      out[doc] = "writing";
-      writingSeen = true;
-    } else {
-      out[doc] = "pending";
-    }
-  }
-  return out;
-}
+const TYPE_TICK_MS = 16;
+const TYPE_CHARS_PER_TICK = 12;
 
 export default function PlanPage() {
   const [idea, setIdea] = useState("");
@@ -80,6 +64,33 @@ export default function PlanPage() {
   const [docStatus, setDocStatus] = useState<Record<string, DocStatus>>({});
   const multiMode = true;
   const [docs, setDocs] = useState<Record<string, string>>({});
+  const [typeCursor, setTypeCursor] = useState({ idx: 0, shown: 0 });
+  const [typingActive, setTypingActive] = useState(false);
+  const typing = (loading || typingActive) && multiMode && typeCursor.idx < PREVIEW_DOCS.length;
+  const typeCursorRef = useRef(typeCursor);
+  const docsRef = useRef(docs);
+  const docStatusRef = useRef(docStatus);
+  docsRef.current = docs;
+  docStatusRef.current = docStatus;
+  typeCursorRef.current = typeCursor;
+  useEffect(() => {
+    if (typeCursor.idx >= PREVIEW_DOCS.length) setTypingActive(false);
+  }, [typeCursor.idx]);
+  useEffect(() => {
+    if (!typing) return;
+    const id = setInterval(() => {
+      const prev = typeCursorRef.current;
+      if (prev.idx >= PREVIEW_DOCS.length) return;
+      const doc = PREVIEW_DOCS[prev.idx];
+      const available = docsRef.current[doc]?.length ?? 0;
+      if (prev.shown < available) {
+        setTypeCursor({ idx: prev.idx, shown: Math.min(available, prev.shown + TYPE_CHARS_PER_TICK) });
+      } else if (docStatusRef.current[doc] === "done") {
+        setTypeCursor({ idx: prev.idx + 1, shown: 0 });
+      }
+    }, TYPE_TICK_MS);
+    return () => clearInterval(id);
+  }, [typing]);
   const [mcpBlueprintId, setMcpBlueprintId] = useState<string | null>(null);
   const [mcpCopied, setMcpCopied] = useState(false);
   // Maps a local plan id -> the blueprint id the MCP bridge assigned, so
@@ -269,6 +280,8 @@ export default function PlanPage() {
     setLoading(true);
     setDocs({});
     setDocStatus({});
+    setTypeCursor({ idx: 0, shown: 0 });
+    setTypingActive(true);
     abortRef.current = new AbortController();
     try {
       const collected = await streamMultiDocs(ideaText, model, answers);
@@ -286,6 +299,7 @@ export default function PlanPage() {
       setIdea("");
       void publishMCP(record, { silent: true });
     } catch (err) {
+      setTypingActive(false);
       const aborted = (err as Error | undefined)?.name === "AbortError";
       if (!aborted) setError(err instanceof Error ? err.message : "Terjadi kesalahan");
       // Preserve whatever streamed so far as a recoverable draft instead of an empty shell.
@@ -403,6 +417,7 @@ export default function PlanPage() {
     abortRef.current = null;
     setClarifying(false);
     setLoading(false);
+    setTypingActive(false);
     setDocStatus({});
     setError(null);
   };
@@ -432,6 +447,7 @@ export default function PlanPage() {
     if (!plan) return;
     setActiveId(id);
     setIdea(plan.idea);
+    setTypingActive(false);
     setDocs(plan.docs ?? {});
     setActiveDoc("prd");
     setDocStatus({});
@@ -457,6 +473,7 @@ export default function PlanPage() {
   const startNewPlan = () => {
     setActiveId(null);
     setIdea("");
+    setTypingActive(false);
     setDocs({});
     setDocStatus({});
     setMcpBlueprintId(null);
@@ -475,6 +492,7 @@ export default function PlanPage() {
     if (activeId === id) {
       setActiveId(null);
       setIdea("");
+      setTypingActive(false);
       setDocs({});
       setDocStatus({});
       setClarify(null);
@@ -488,24 +506,30 @@ export default function PlanPage() {
     });
   };
 
-  const displayStatus = deriveDisplayStatus(docStatus, loading);
-  const activeStatus: DocStatus | undefined = displayStatus[activeDoc as PreviewDoc];
-  const writingDoc = PREVIEW_DOCS.find((doc) => displayStatus[doc] === "writing") ?? null;
+  const writingDoc: PreviewDoc | null = typing ? PREVIEW_DOCS[typeCursor.idx] : null;
+  const displayStatus = {} as Record<PreviewDoc, DocStatus>;
+  const displayedDocs: Record<string, string> = { ...docs };
+  PREVIEW_DOCS.forEach((doc, i) => {
+    if (!typing) {
+      displayStatus[doc] = "done";
+    } else if (i < typeCursor.idx) {
+      displayStatus[doc] = "done";
+    } else if (i === typeCursor.idx) {
+      displayStatus[doc] = "writing";
+      displayedDocs[doc] = (docs[doc] ?? "").slice(0, typeCursor.shown);
+    } else {
+      displayStatus[doc] = "pending";
+      displayedDocs[doc] = "";
+    }
+  });
+  const activeStatus = displayStatus[activeDoc as PreviewDoc];
 
   useEffect(() => {
-    if (!loading || !writingDoc || manualDocRef.current) return;
+    if (!writingDoc || manualDocRef.current) return;
     setActiveDoc(writingDoc);
-  }, [writingDoc, loading]);
+  }, [writingDoc]);
 
-  const visibleDocs: Record<string, string> = { ...docs };
-  if (loading) {
-    for (const doc of PREVIEW_DOCS) {
-      if (displayStatus[doc] === "pending") delete visibleDocs[doc];
-    }
-  }
-
-  const activeContent = visibleDocs[activeDoc] || "";
-  const isWriting = loading && multiMode && activeStatus === "writing" && !!activeContent.trim();
+  const activeContent = displayedDocs[activeDoc] || "";
 
   return (
     <AuthGate>
@@ -654,15 +678,15 @@ export default function PlanPage() {
           <PreviewWindow
             activeDoc={activeDoc as PreviewDoc}
             multiMode={multiMode}
-            docs={visibleDocs}
+            docs={displayedDocs}
             onSelectDoc={(doc) => {
               manualDocRef.current = true;
               setActiveDoc(doc);
             }}
-            progress={loading && multiMode ? displayStatus : undefined}
-            isGenerating={loading && multiMode}
+            progress={typing ? displayStatus : undefined}
+            isGenerating={typing}
             statusText={
-              loading
+              typing
                 ? "Menulis dokumen..."
                 : `${(activeContent || "").split(/\s+/).filter(Boolean).length} kata`
             }
@@ -694,7 +718,7 @@ export default function PlanPage() {
               </>
             }
           >
-            {loading && multiMode && activeStatus !== "done" && !activeContent.trim() ? (
+            {typing && activeStatus !== "done" && !activeContent.trim() ? (
               <div className="flex h-full min-h-[300px] flex-col items-center justify-center gap-3 p-8 text-center">
                 <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
                 <p className="text-sm font-medium text-foreground">
@@ -709,7 +733,15 @@ export default function PlanPage() {
                 </p>
               </div>
             ) : activeContent ? (
-              <TypedDoc key={activeDoc} content={activeContent} active={isWriting} />
+              <>
+                <Markdown content={activeContent} />
+                {typing && activeStatus === "writing" && (
+                  <span
+                    className="ml-0.5 inline-block h-4 w-[2px] animate-pulse rounded bg-foreground align-middle"
+                    aria-hidden="true"
+                  />
+                )}
+              </>
             ) : (
               <div className="flex h-full min-h-[300px] flex-col items-center justify-center gap-4 p-8 text-center">
                 <div className="flex size-14 items-center justify-center rounded-lg border bg-muted/30">
@@ -736,17 +768,3 @@ export default function PlanPage() {
 
 type Answer = { question: string; selected: string[]; note?: string };
 
-function TypedDoc({ content, active }: { content: string; active: boolean }) {
-  const typed = useTypedText(content, active);
-  return (
-    <>
-      <Markdown content={active ? typed : content} />
-      {active && (
-        <span
-          className="ml-0.5 inline-block h-4 w-[2px] animate-pulse rounded bg-foreground align-middle"
-          aria-hidden="true"
-        />
-      )}
-    </>
-  );
-}
