@@ -40,7 +40,7 @@ const TEMPLATES = [
 type DocStatus = "pending" | "writing" | "done";
 
 const TYPE_TICK_MS = 16;
-const TYPE_CHARS_PER_TICK = 12;
+const TYPE_CHARS_PER_TICK = 4;
 
 export default function PlanPage() {
   const [idea, setIdea] = useState("");
