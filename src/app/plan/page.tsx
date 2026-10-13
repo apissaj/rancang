@@ -72,6 +72,7 @@ export default function PlanPage() {
     setError,
   });
   const [activeDoc, setActiveDoc] = useState("prd");
+  const [copiedDoc, setCopiedDoc] = useState(false);
   // When the user picks a tab manually we stop auto-following the document
   // currently being streamed.
   const manualDocRef = useRef(false);
@@ -417,6 +418,18 @@ export default function PlanPage() {
 
   const activeContent = displayedDocs[activeDoc] || "";
 
+  const copyDocMarkdown = async () => {
+    const content = docs[activeDoc] ?? "";
+    if (!content.trim()) return;
+    try {
+      await navigator.clipboard.writeText(content);
+      setCopiedDoc(true);
+      setTimeout(() => setCopiedDoc(false), 1500);
+    } catch {
+      setError("Gagal menyalin markdown.");
+    }
+  };
+
   return (
     <AuthGate>
     <div className="flex flex-1 flex-col overflow-hidden lg:h-dvh lg:flex-none lg:flex-row">
@@ -579,6 +592,16 @@ export default function PlanPage() {
             }
             actions={
               <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={copyDocMarkdown}
+                  disabled={typing || !(docs[activeDoc] ?? "").trim()}
+                  title={typing ? "Tunggu dokumen selesai ditulis" : "Salin markdown dokumen ini"}
+                >
+                  {copiedDoc ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                  <span className="truncate">{copiedDoc ? "Tersalin" : "Salin Markdown"}</span>
+                </Button>
                 {mcpBlueprintId && (
                   <Button
                     variant="outline"

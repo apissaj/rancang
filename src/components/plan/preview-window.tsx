@@ -118,6 +118,7 @@ export function PreviewWindow({
           aria-valuemin={0}
           aria-valuemax={progressDocs.length}
           aria-valuenow={doneCount}
+          aria-busy={isGenerating}
           className="flex items-center gap-2 border-b bg-muted/10 px-4 py-1.5"
         >
           <div className="flex h-1 flex-1 gap-0.5 overflow-hidden rounded-full">
@@ -190,7 +191,7 @@ export function PreviewWindow({
         <span className="flex items-center gap-1">
           <ChevronRight className="size-3" /> {current.name}
         </span>
-        <span className="ml-auto flex min-w-0 items-center gap-1.5 truncate">
+        <span role="status" aria-live="polite" className="ml-auto flex min-w-0 items-center gap-1.5 truncate">
           {isGenerating && <Loader2 className="size-3 shrink-0 animate-spin" aria-hidden="true" />}
           <span className="truncate">{statusText}</span>
         </span>
