@@ -80,7 +80,12 @@ function checkArgs(schema, args) {
 
   for (const [key, value] of Object.entries(input)) {
     const spec = props[key];
-    if (!spec) continue; // tolerate extra keys
+    if (!spec) {
+      if (schema.additionalProperties === false) {
+        throw new Error(`Unknown argument: ${key}. Allowed: ${Object.keys(props).join(", ")} (or use blueprint_id as an alias for id)`);
+      }
+      continue;
+    }
 
     if (spec.enum && !spec.enum.includes(value)) {
       throw new Error(`Invalid value for ${key}: ${JSON.stringify(value)} (expected one of ${spec.enum.join(", ")})`);
@@ -167,6 +172,7 @@ export const TOOLS = [
       const wanted = docs?.length ? docs : DOC_NAMES;
       const out = {
         id: record.id,
+        resolved_id: record.id,
         title: record.title,
         idea: record.idea,
         model: record.model,
@@ -229,13 +235,14 @@ export const TOOLS = [
       if (!result.next) {
         return text({
           id: result.id,
+          resolved_id: result.id,
           title: result.title,
           summary: result.summary,
           message:
             "All tasks are complete. Run the blueprint's verification section end to end.",
         });
       }
-      return text(result);
+      return text({ ...result, resolved_id: result.id });
     },
   },
 
@@ -254,13 +261,14 @@ export const TOOLS = [
           description: "Set false to reopen the task. Defaults to true.",
         },
       },
-      required: ["task_id"],
+      required: ["id", "task_id"],
       additionalProperties: false,
     },
     handler: ({ id, task_id, done }) => {
       const result = completeTask(id, task_id, done !== false);
       return text({
         id: result.id,
+        resolved_id: result.id,
         marked: `${result.taskId} -> ${result.done ? "done" : "pending"}`,
         progress: summarizeTasks(
           result.tasks.map((t) => `${t.done ? "- [x]" : "- [ ]"} ${t.id}`).join("\n")
@@ -356,6 +364,7 @@ export async function registerTools(server, { CallToolRequestSchema, ListToolsRe
 }
 
 export {
+  checkArgs,
   DOC_NAMES,
   saveBlueprint,
   resolveBlueprint,

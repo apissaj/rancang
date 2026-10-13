@@ -292,6 +292,8 @@ export function buildExecutionPrompt(record, options = {}) {
 
   parts.push(`# Execute blueprint: ${record.title}`);
   parts.push("");
+  parts.push(`- Blueprint id: **${record.id}** — always pass this id to the \`rancang_next_task\` and \`rancang_task_complete\` tools so the loop never touches a different blueprint.`);
+  parts.push("");
   parts.push(
     `You are ${target} working autonomously on a real project. The complete, approved blueprint is below. Build it for real — no placeholders, no stubs, no fabricated output.`
   );
