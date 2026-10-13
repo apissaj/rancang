@@ -24,24 +24,41 @@ type HastNode = {
   value?: string;
 };
 
-// Places an inline caret at the very end of the streamed text (inside the last
-// text-bearing element) instead of after the whole block, so it follows typing.
+// Places an inline caret right after the last text node in the streamed
+// document, inside that text node's own parent. Appending it as the last child
+// of the deepest element instead would put a <span> directly inside <table>,
+// <ul>, or <ol> — invalid HTML that React reports as a hydration error and that
+// also makes the caret jump to the wrong place while a list/table streams in.
 function rehypeTypingCaret() {
   return (tree: HastNode) => {
-    let parent = tree;
-    for (;;) {
-      const last = parent.children?.[parent.children.length - 1];
-      if (!last || last.type !== "element") break;
-      if (!last.children?.length) break;
-      parent = last;
-    }
     const caret: HastNode = {
       type: "element",
       tagName: "span",
       properties: { className: ["typing-caret"], ariaHidden: "true" },
       children: [],
     };
-    parent.children = [...(parent.children ?? []), caret];
+    let targetParent: HastNode | null = null;
+    let targetIndex = -1;
+    const visit = (node: HastNode) => {
+      const kids = node.children;
+      if (!kids) return;
+      kids.forEach((child, i) => {
+        if (child.type === "text") {
+          if (child.value && child.value.trim() !== "") {
+            targetParent = node;
+            targetIndex = i;
+          }
+        } else if (child.type === "element") {
+          visit(child);
+        }
+      });
+    };
+    visit(tree);
+    if (targetParent && targetIndex >= 0) {
+      (targetParent as HastNode).children!.splice(targetIndex + 1, 0, caret);
+    } else {
+      tree.children = [...(tree.children ?? []), caret];
+    }
   };
 }
 
