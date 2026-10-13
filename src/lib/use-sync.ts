@@ -55,7 +55,8 @@ export function useSync() {
           const { plans } = (await plansRes.json()) as { plans: PlanRecord[] };
           for (const remote of plans) {
             const local = planStore.all().find((p) => p.id === remote.id);
-            if (!local || remote.createdAt >= local.createdAt) planStore.save(remote);
+            if (!local) planStore.save(remote);
+            else if (remote.createdAt >= local.createdAt) planStore.save({ ...remote, mcpId: local.mcpId ?? remote.mcpId });
           }
         }
         if (designsRes.ok) {
