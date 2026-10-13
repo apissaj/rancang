@@ -70,9 +70,11 @@ export function useMcpPublish({
         `Ikuti blueprint ini saat mengimplementasi, sesuai urutan tugas.`;
     try {
       await navigator.clipboard.writeText(
-        `Gunakan MCP server "rancang". Ambil execution prompt blueprint ${mcpBlueprintId} ` +
-          `(tool rancang_execution_prompt, agent: "Claude Code", working_dir: <path>) lalu kerjakan task-nya ` +
-          `satu per satu: rancang_next_task → implementasi + verifikasi → rancang_task_complete. ` +
+        `Gunakan MCP server "rancang". Blueprint id: ${mcpBlueprintId}. ` +
+          `Panggil rancang_execution_prompt dengan id "${mcpBlueprintId}" (jangan pakai "latest"), ` +
+          `lalu kerjakan task-nya satu per satu: rancang_next_task dengan id "${mcpBlueprintId}" → ` +
+          `implementasi + verifikasi → rancang_task_complete dengan id "${mcpBlueprintId}". ` +
+          `Kerjakan di folder proyek yang sedang aktif. ` +
           mcpDocTail
       );
       setMcpCopied(true);

@@ -149,12 +149,12 @@ const CHECKBOX_RE = /^\[\s*([xX]?)\s*\]\s*/;
 const BRACKET_RE = /^\[([^\]]*)\]\s*/;
 const BOLD_RE = /^\*\*([^*]+)\*\*\s*/;
 const TICK_RE = /^`([^`]+)`\s*/;
-const ID_RE = /^((?:US|F|T|P|PH|S)?\d+(?:[.-]\d+)*)\b/;
+const ID_RE = /^((?:[A-Za-z]{1,6}\d*-)?(?:[A-Za-z]{1,6})?\d+(?:[.-](?:[A-Za-z]{1,6})?\d+)*)\b/;
 
 /** True when a token is a bare task id (T001, F1, US1-1, PH2) — not prose. */
 function isTaskId(token) {
   if (!token) return false;
-  return /^(?:US|F|T|P|PH|S)?\d+(?:[.-]\d+)*$/i.test(token.trim());
+  return /^(?:[A-Za-z]{1,6}\d*-)?(?:[A-Za-z]{1,6})?\d+(?:[.-](?:[A-Za-z]{1,6})?\d+)*$/i.test(token.trim());
 }
 
 /** Normalize a task bullet to { mark, id, rest } — or null when the line isn't a task. */
