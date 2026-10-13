@@ -3,20 +3,12 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { nanoid } from "nanoid";
-import { Check, Copy, FileText, Loader2, ChevronDown, Bookmark, Palette } from "lucide-react";
+import { Check, Copy, FileText, Loader2, Palette } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Markdown } from "@/components/markdown";
 import { PlanSidebar } from "@/components/plan/plan-sidebar";
-import { ClarifyQuestions, type QuestionAnswers } from "@/components/plan/clarify-questions";
+import type { QuestionAnswers } from "@/components/plan/clarify-questions";
+import { IdeaForm } from "@/components/plan/idea-form";
 import { PREVIEW_DOCS, PreviewWindow, type PreviewDoc } from "@/components/plan/preview-window";
 import { toastManager } from "@/components/ui/toast";
 import { planStore, type PlanRecord } from "@/lib/storage";
@@ -28,17 +20,6 @@ import { AuthGate } from "@/components/auth-gate";
 import { useTypewriter } from "@/hooks/use-typewriter";
 import { usePlanStream, splitAllDocErrors, type Answer, type DocStatus } from "@/hooks/use-plan-stream";
 import { useMcpPublish } from "@/hooks/use-mcp-publish";
-
-const TEMPLATES = [
-  { label: "SaaS Dashboard", idea: "Dashboard SaaS analytics di mana user melihat metrik bisnis real-time, membuat laporan otomatis, dan mengundang anggota tim dengan role berbeda." },
-  { label: "E-commerce", idea: "Toko online dengan katalog produk, keranjang, checkout, dan riwayat pesanan. Fokus UX mobile-first dan pembayaran mudah." },
-  { label: "Landing Page", idea: "Landing page produk dengan hero, fitur, testimoni, dan form waitlist. Fokus konversi dan loading cepat." },
-  { label: "Mobile App", idea: "Aplikasi mobile habit tracker di mana pengguna mencatat kebiasaan harian, melihat streak, dan mendapat pengingat." },
-  { label: "REST API", idea: "REST API untuk manajemen tugas (CRUD) dengan auth JWT, rate limiting, dan dokumentasi OpenAPI." },
-  { label: "Chat Bot", idea: "Chatbot customer service yang menjawab FAQ otomatis, eskalasi ke manusia, dan terintegrasi WhatsApp." },
-  { label: "Internal Tool", idea: "Alat internal untuk tim support mencari dan membalas tiket lebih cepat, dengan integrasi CRM dan shortcut." },
-  { label: "AI Summarizer", idea: "Ekstensi browser yang merangkum artikel panjang menjadi 3 poin singkat dan bisa disimpan ke koleksi." },
-];
 
 export default function PlanPage() {
   const [idea, setIdea] = useState("");
@@ -466,150 +447,25 @@ export default function PlanPage() {
 
       <div className="thin-scrollbar flex min-h-0 flex-1 flex-col gap-4 overflow-auto p-4 lg:flex-row lg:overflow-hidden lg:px-6 lg:pb-6 lg:pt-0">
         <div className="thin-scrollbar flex min-h-0 flex-col gap-3 lg:w-1/3 lg:overflow-y-auto">
-          <div className="flex h-14 shrink-0 items-center border-b px-4">
-            <h1 className="text-xl font-semibold tracking-tight">Jelaskan ide kamu</h1>
-          </div>
-          <p className="px-4 text-sm text-muted-foreground">
-            Dapatkan PRD terstruktur dengan tujuan, kebutuhan, dan rincian task langkah demi langkah.
-          </p>
-          {activePlan && !clarify && (
-            <p className="px-4 text-xs text-muted-foreground">
-              Sedang membuka: <span className="truncate font-medium text-foreground">{activePlan.title}</span>
-            </p>
-          )}
-
-          <div className="flex items-center gap-2 rounded-lg border bg-background/60 p-2.5">
-            <Label htmlFor="model-select" className="text-sm text-muted-foreground">Model AI</Label>
-            <Select value={model} onValueChange={(v) => v && setModel(v)} disabled={models.length === 0}>
-              <SelectTrigger id="model-select" className="h-8 min-w-0 flex-1">
-                <SelectValue placeholder="Memuat model..." />
-              </SelectTrigger>
-              <SelectContent>
-                {models.map((m) => (
-                  <SelectItem key={m} value={m}>{m}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          {modelError && (
-            <div className="rounded-lg border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
-              Gagal memuat daftar model. Coba refresh halaman atau periksa koneksi.
-            </div>
-          )}
-
-          <Textarea
-            id="idea-input"
-            name="idea"
-            aria-label="Ide aplikasi atau fitur"
-            value={idea}
-            onChange={(e) => setIdea(e.target.value)}
-            placeholder={`mis. "${TEMPLATES[0].idea}"\n\nIde lain:\n- ${TEMPLATES[1].idea}\n- ${TEMPLATES[2].idea}`}
-            className={`thin-scrollbar h-44 resize-none overflow-y-auto ${clarify ? "hidden" : ""}`}
+          <IdeaForm
+            idea={idea}
+            setIdea={setIdea}
+            model={model}
+            setModel={setModel}
+            models={models}
+            modelError={modelError}
+            clarify={clarify}
+            clarifying={clarifying}
+            loading={loading}
+            activePlan={activePlan}
+            error={error}
+            notice={notice}
+            startGenerate={startGenerate}
+            cancelGenerate={cancelGenerate}
+            clarifyElapsed={clarifyElapsed}
+            submitAnswers={submitAnswers}
+            skipClarify={skipClarify}
           />
-          {idea.length > 0 && !clarify && (
-            <p className="-mt-1 text-right text-xs text-muted-foreground">
-              {idea.length} / 10.000 karakter
-            </p>
-          )}
-          {clarify && (
-            <p className="break-words rounded-md border bg-muted/30 px-3 py-2 text-sm leading-relaxed text-muted-foreground">
-              Ide: {idea}
-            </p>
-          )}
-          {!clarify && (
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <DropdownMenu>
-                <DropdownMenuTrigger
-                  render={
-                    <Button variant="outline" size="sm" className="h-9 text-sm" title="Pilih template ide untuk memulai lebih cepat">
-                      <Bookmark className="h-3.5 w-3.5" />
-                      Template Ide
-                      <ChevronDown className="h-3 w-3" />
-                    </Button>
-                  }
-                />
-                <DropdownMenuContent align="start" className="w-80">
-                  {TEMPLATES.map((t) => (
-                    <DropdownMenuItem
-                      key={t.label}
-                      onClick={() => setIdea(t.idea)}
-                      className="flex flex-col items-start gap-0.5"
-                    >
-                      <span className="font-medium">
-                        {t.label}
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        {t.idea.slice(0, 70)}{t.idea.length > 70 ? "…" : ""}
-                      </span>
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-              {idea.trim() === "" && (
-                <span className="text-xs text-muted-foreground">
-                  atau tulis ide kamu sendiri di atas
-                </span>
-              )}
-            </div>
-          )}
-          {!clarify && (
-            <Button
-              onClick={startGenerate}
-              disabled={loading || clarifying || !idea.trim()}
-              title={idea.trim() ? undefined : "Tulis ide terlebih dahulu"}
-              className="w-full"
-            >
-              {(loading || clarifying) && <Loader2 className="h-4 w-4 animate-spin" />}
-              {clarifying
-                ? `Menganalisis ide kamu... (${clarifyElapsed}s)`
-                : loading
-                  ? "Membuat..."
-                  : "Buat PRD"}
-            </Button>
-          )}
-          {clarifying && clarifyElapsed >= 12 && (
-            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-              <span className="text-xs text-muted-foreground">
-                Masih menganalisis. Kamu bisa lewati klarifikasi dan langsung membuat PRD.
-              </span>
-              <Button
-                variant="link"
-                size="sm"
-                onClick={skipClarify}
-                className="h-auto min-w-0 whitespace-normal p-0 text-left"
-              >
-                Lewati, langsung buat
-              </Button>
-            </div>
-          )}
-          {(loading || clarifying) && (
-            <Button
-              variant="outline"
-              onClick={cancelGenerate}
-              className="w-full"
-              title="Hentikan pembuatan. Dokumen yang sudah selesai akan tetap disimpan sebagai draft."
-            >
-              Batal
-            </Button>
-          )}
-          {error && (
-            <div className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive">
-              {error}
-            </div>
-          )}
-          {notice && (
-            <div className="rounded-lg border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
-              {notice}
-            </div>
-          )}
-          {clarify && (
-            <ClarifyQuestions
-              clarify={clarify}
-              onSubmit={submitAnswers}
-              onSkip={skipClarify}
-              submitting={loading}
-            />
-          )}
         </div>
 
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden lg:w-2/3">

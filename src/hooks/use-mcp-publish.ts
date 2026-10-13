@@ -34,7 +34,14 @@ export function useMcpPublish({
         }),
       });
       if (!res.ok) {
-        if (!opts?.silent) setError("Blueprint tersimpan lokal, tapi gagal dikirim ke MCP bridge.");
+        if (!opts?.silent || res.status === 413) {
+          const detail = await res.json().then((j: { error?: string }) => j.error).catch(() => undefined);
+          setError(
+            res.status === 413
+              ? `Blueprint tersimpan lokal, tapi terlalu besar untuk dikirim ke MCP bridge${detail ? ` (${detail})` : ""}. Kurangi ukuran dokumen agar bisa dipakai agent.`
+              : "Blueprint tersimpan lokal, tapi gagal dikirim ke MCP bridge."
+          );
+        }
         return;
       }
       const data = (await res.json()) as { id: string };
