@@ -61,6 +61,7 @@ export default function PlanPage() {
   // Tracks the latest streamed content so a mid-stream failure can still save a partial draft.
   const partialRef = useRef<{ markdown: string; docs: Record<string, string> }>({ markdown: "", docs: {} });
   const abortRef = useRef<AbortController | null>(null);
+  const mcpVerifyRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     fetch("/api/models")
@@ -304,19 +305,48 @@ export default function PlanPage() {
     setClarify(null);
     setDocErrors(cleaned.errors);
     setRetryingDoc(null);
-    // Restore the MCP blueprint id saved on the record (if any) so the
-    // "Salin Prompt MCP" button reappears after reload/plan-switch; older
-    // records that predate persistence just fall back to re-publishing.
+    // Restore the MCP blueprint id saved on the record (if any). The id is only
+    // trusted after a live check against the bridge — records may hold an id
+    // whose blueprint file was deleted, and showing that id would make the
+    // "Salin Prompt MCP" button copy a dead id. So a stored id is treated as a
+    // candidate: verify it exists via GET /api/mcp/blueprint?id=...; on success
+    // keep it (and backfill mcpIds), on 404/network failure fall back to a
+    // silent re-publish when the docs are present or leave the button hidden.
     const hadMcp = mcpIds.current[id];
     const mcpId = plan.mcpId ?? hadMcp ?? null;
-    setMcpBlueprintId(mcpId);
+    delete mcpIds.current[id];
+    setMcpBlueprintId(null);
     setMcpCopied(false);
-    if (mcpId) mcpIds.current[id] = mcpId;
-    if (plan.docs && !mcpId && !hadMcp) {
-      // Published once (bridge still has it) but id lost pre-persistence —
-      // re-publish silently once per session to get a fresh id so the button shows.
-      void publishMCP(plan, { silent: true });
+    mcpVerifyRef.current?.abort();
+    const verify = new AbortController();
+    mcpVerifyRef.current = verify;
+    const republish = () => {
+      if (plan.docs && Object.keys(plan.docs).length > 0) void publishMCP(plan, { silent: true });
+    };
+    if (!mcpId) {
+      republish();
+      return;
     }
+    fetch(`/api/mcp/blueprint?id=${encodeURIComponent(mcpId)}`, { signal: verify.signal })
+      .then((res) => {
+        if (verify.signal.aborted) return;
+        if (res.ok) {
+          mcpIds.current[id] = mcpId;
+          setMcpBlueprintId(mcpId);
+          return;
+        }
+        if (res.status === 404) {
+          const current = planStore.all().find((p) => p.id === id);
+          if (current) {
+            const clean: PlanRecord = { ...current };
+            delete clean.mcpId;
+            planStore.save(clean);
+            setPlans(planStore.all());
+          }
+        }
+        republish();
+      })
+      .catch(() => {});
   };
 
   const activePlan = activeId ? plans.find((p) => p.id === activeId) ?? null : null;
