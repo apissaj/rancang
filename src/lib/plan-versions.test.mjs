@@ -19,7 +19,7 @@ setStorageScope(null);
 
 // Seed an OLD-SHAPE record directly into localStorage (no `versions` field).
 const oldShape = { id: "old1", title: "Old plan", idea: "an idea", markdown: "# Old MD", createdAt: 1 };
-window.localStorage.setItem("prd-forge:anon:plans", JSON.stringify([oldShape]));
+window.localStorage.setItem("rancang:anon:plans", JSON.stringify([oldShape]));
 
 const all = planStore.all();
 assert.strictEqual(all.length, 1, "old-shape record should still load");

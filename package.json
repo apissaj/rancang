@@ -8,6 +8,7 @@
     "start": "next start --port 3100",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src",
+    "test": "node scripts/run-tests.mjs",
     "cli": "node src/rancang-cli.mjs"
   },
   "bin": {
