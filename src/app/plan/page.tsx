@@ -25,6 +25,9 @@ import { useSync } from "@/lib/use-sync";
 import { useAuth } from "@/components/auth-provider";
 import { SyncIndicator } from "@/components/sync-indicator";
 import { AuthGate } from "@/components/auth-gate";
+import { useTypewriter } from "@/hooks/use-typewriter";
+import { usePlanStream, type Answer, type DocStatus } from "@/hooks/use-plan-stream";
+import { useMcpPublish } from "@/hooks/use-mcp-publish";
 
 const TEMPLATES = [
   { label: "SaaS Dashboard", idea: "Dashboard SaaS analytics di mana user melihat metrik bisnis real-time, membuat laporan otomatis, dan mengundang anggota tim dengan role berbeda." },
@@ -36,11 +39,6 @@ const TEMPLATES = [
   { label: "Internal Tool", idea: "Alat internal untuk tim support mencari dan membalas tiket lebih cepat, dengan integrasi CRM dan shortcut." },
   { label: "AI Summarizer", idea: "Ekstensi browser yang merangkum artikel panjang menjadi 3 poin singkat dan bisa disimpan ke koleksi." },
 ];
-
-type DocStatus = "pending" | "writing" | "done";
-
-const TYPE_TICK_MS = 16;
-const TYPE_CHARS_PER_TICK = 4;
 
 export default function PlanPage() {
   const [idea, setIdea] = useState("");
@@ -63,38 +61,16 @@ export default function PlanPage() {
   const [modelError, setModelError] = useState(false);
   const [docStatus, setDocStatus] = useState<Record<string, DocStatus>>({});
   const [docs, setDocs] = useState<Record<string, string>>({});
-  const [typeCursor, setTypeCursor] = useState({ idx: 0, shown: 0 });
-  const [typingActive, setTypingActive] = useState(false);
-  const typing = (loading || typingActive) && typeCursor.idx < PREVIEW_DOCS.length;
-  const typeCursorRef = useRef(typeCursor);
-  const docsRef = useRef(docs);
-  const docStatusRef = useRef(docStatus);
-  docsRef.current = docs;
-  docStatusRef.current = docStatus;
-  typeCursorRef.current = typeCursor;
-  useEffect(() => {
-    if (typeCursor.idx >= PREVIEW_DOCS.length) setTypingActive(false);
-  }, [typeCursor.idx]);
-  useEffect(() => {
-    if (!typing) return;
-    const id = setInterval(() => {
-      const prev = typeCursorRef.current;
-      if (prev.idx >= PREVIEW_DOCS.length) return;
-      const doc = PREVIEW_DOCS[prev.idx];
-      const available = docsRef.current[doc]?.length ?? 0;
-      if (prev.shown < available) {
-        setTypeCursor({ idx: prev.idx, shown: Math.min(available, prev.shown + TYPE_CHARS_PER_TICK) });
-      } else if (docStatusRef.current[doc] === "done") {
-        setTypeCursor({ idx: prev.idx + 1, shown: 0 });
-      }
-    }, TYPE_TICK_MS);
-    return () => clearInterval(id);
-  }, [typing]);
-  const [mcpBlueprintId, setMcpBlueprintId] = useState<string | null>(null);
-  const [mcpCopied, setMcpCopied] = useState(false);
-  // Maps a local plan id -> the blueprint id the MCP bridge assigned, so
-  // re-publishing after an edit updates the same blueprint instead of cloning.
-  const mcpIds = useRef<Record<string, string>>({});
+  const { typeCursor, setTypingActive, resetTypeCursor, typing } = useTypewriter({
+    active: loading,
+    docs,
+    docStatus,
+  });
+  const { publishMCP, copyMcpPrompt, mcpBlueprintId, setMcpBlueprintId, mcpCopied, setMcpCopied, mcpIds } = useMcpPublish({
+    getDocs: () => docs,
+    modelRef,
+    setError,
+  });
   const [activeDoc, setActiveDoc] = useState("prd");
   // When the user picks a tab manually we stop auto-following the document
   // currently being streamed.
@@ -174,87 +150,13 @@ export default function PlanPage() {
     if (sync.status === "synced") setPlans(planStore.all());
   }, [sync.status]);
 
-  const streamMultiDocs = async (ideaText: string, selectedModel: string, answers: Answer[] | undefined) => {
-    const res = await fetch("/api/plan/full", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      signal: abortRef.current?.signal,
-      body: JSON.stringify({ idea: ideaText, answers, model: selectedModel }),
-    });
-    if (!res.ok || !res.body) throw new Error(await res.text());
-    const reader = res.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = "";
-    // Docs can interleave on the server, so routing follows the open set: the
-    // next bytes belong to the most recently opened doc that has not closed yet.
-    const openOrder: string[] = [];
-    let currentDoc = "prd";
-    const collected: Record<string, string> = { prd: "", spec: "", plan: "", tasks: "" };
-    const DOC_MARKER = /<!-- (\/)?DOC:(\w+) -->/g;
-    // Max length of a `<!-- DOC:xxxx -->` marker. We only need to hold this
-    // many trailing characters in the buffer to guard against a marker being
-    // split across chunk boundaries.
-    const DOC_MARKER_LEN = 32;
-    manualDocRef.current = false;
-    setDocStatus({ prd: "pending", spec: "pending", plan: "pending", tasks: "pending" });
-    const markWriting = (d: string) => {
-      setDocStatus((prev) => ({ ...prev, [d]: "writing" }));
-    };
-    // Emit content from `s` into `collected`, splitting on markers. Returns the
-    // text AFTER the last marker (may contain a marker split across chunks).
-    const processBuffer = (s: string): string => {
-      DOC_MARKER.lastIndex = 0;
-      let pos = 0;
-      let m: RegExpExecArray | null;
-      while ((m = DOC_MARKER.exec(s)) !== null) {
-        const before = s.slice(pos, m.index);
-        if (before) collected[currentDoc] += before;
-        const closing = m[1] === "/";
-        const name = m[2];
-        if (closing) {
-          if (name in collected) {
-            const idx = openOrder.lastIndexOf(name);
-            if (idx !== -1) openOrder.splice(idx, 1);
-            currentDoc = openOrder.length > 0 ? openOrder[openOrder.length - 1] : currentDoc;
-            setDocStatus((prev) => ({ ...prev, [name]: "done" }));
-          }
-        } else if (name in collected) {
-          openOrder.push(name);
-          currentDoc = name;
-          markWriting(name);
-        }
-        pos = m.index + m[0].length;
-      }
-      return s.slice(pos);
-    };
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      buffer += decoder.decode(value, { stream: true });
-      // Process markers in the buffer, flushing everything before the last
-      // marker into `collected[currentDoc]`.
-      buffer = processBuffer(buffer);
-      // Keep only the last DOC_MARKER_LEN chars so a marker split across two
-      // chunks is not lost; flush the rest into the active doc so the preview
-      // streams live instead of appearing all at once at the end.
-      if (buffer.length > DOC_MARKER_LEN) {
-        const safe = buffer.slice(0, -DOC_MARKER_LEN);
-        collected[currentDoc] += safe;
-        buffer = buffer.slice(-DOC_MARKER_LEN);
-      }
-      setDocs({ ...collected });
-      partialRef.current = { markdown: collected.prd, docs: { ...collected } };
-    }
-    // Flush whatever remains (trailing content after the last marker, or a doc
-    // whose marker never arrived).
-    // First re-scan the tail for markers that were held back across chunks.
-    buffer = processBuffer(buffer);
-    if (buffer.trim()) collected[currentDoc] += buffer;
-    setDocs({ ...collected });
-    setDocStatus({ prd: "done", spec: "done", plan: "done", tasks: "done" });
-    partialRef.current = { markdown: collected.prd, docs: { ...collected } };
-    return collected;
-  };
+  const { streamMultiDocs } = usePlanStream({
+    setDocs,
+    setDocStatus,
+    manualDocRef,
+    partialRef,
+    getSignal: () => abortRef.current?.signal,
+  });
 
   const generatePrd = async (answers?: Answer[]) => {
     setError(null);
@@ -279,7 +181,7 @@ export default function PlanPage() {
     setLoading(true);
     setDocs({});
     setDocStatus({});
-    setTypeCursor({ idx: 0, shown: 0 });
+    resetTypeCursor();
     setTypingActive(true);
     abortRef.current = new AbortController();
     try {
@@ -316,65 +218,6 @@ export default function PlanPage() {
       }
     } finally {
       setLoading(false);
-    }
-  };
-
-  // Push a finished blueprint to the MCP bridge so coding agents (Claude Code,
-  // Cursor, Codex, Hermes) can pull it via the rancang_* MCP tools. Runs in the
-  // background: local generation must never fail because the bridge is down.
-  const publishMCP = async (record: PlanRecord, opts?: { silent?: boolean }) => {
-    if (!record.docs || Object.keys(record.docs).length === 0) return;
-    try {
-      const res = await fetch("/api/mcp/blueprint", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          id: mcpIds.current[record.id],
-          title: record.title,
-          idea: record.idea,
-          model: modelRef.current,
-          docs: record.docs,
-        }),
-      });
-      if (!res.ok) {
-        if (!opts?.silent) setError("Blueprint tersimpan lokal, tapi gagal dikirim ke MCP bridge.");
-        return;
-      }
-      const data = (await res.json()) as { id: string };
-      mcpIds.current[record.id] = data.id;
-      setMcpBlueprintId(data.id);
-      // Persist the bridge-assigned id on the record so a page reload or plan
-      // switch can restore the "Salin Prompt MCP" button without re-publishing.
-      if (data.id !== record.mcpId) {
-        const stored = planStore.all().find((p) => p.id === record.id);
-        if (stored) planStore.save({ ...stored, mcpId: data.id });
-      }
-      if (!opts?.silent) setMcpCopied(true);
-    } catch {
-      if (!opts?.silent) setError("Blueprint tersimpan lokal, tapi MCP bridge tidak jalan (port 3110?).");
-    }
-  };
-
-  const copyMcpPrompt = async () => {
-    if (!mcpBlueprintId) return;
-    const hasDesign = !!docs.design?.trim();
-    const mcpDocTail = hasDesign
-      ? `Blueprint ini berisi PRD, spec, plan, tasks, dan DESIGN.md + wireframe — ikuti semuanya, ` +
-        `terutama DESIGN.md untuk implementasi UI/UX.`
-      : `Blueprint ini berisi PRD, spec, plan, tasks. ` +
-        `(DESIGN.md akan menyusul jika kamu membuat desain dari PRD ini.) ` +
-        `Ikuti blueprint ini saat mengimplementasi, sesuai urutan tugas.`;
-    try {
-      await navigator.clipboard.writeText(
-        `Gunakan MCP server "rancang". Ambil execution prompt blueprint ${mcpBlueprintId} ` +
-          `(tool rancang_execution_prompt, agent: "Claude Code", working_dir: <path>) lalu kerjakan task-nya ` +
-          `satu per satu: rancang_next_task → implementasi + verifikasi → rancang_task_complete. ` +
-          mcpDocTail
-      );
-      setMcpCopied(true);
-      setTimeout(() => setMcpCopied(false), 1500);
-    } catch {
-      setError("Gagal menyalin prompt MCP.");
     }
   };
 
@@ -761,5 +604,5 @@ export default function PlanPage() {
   );
 }
 
-type Answer = { question: string; selected: string[]; note?: string };
+
 
