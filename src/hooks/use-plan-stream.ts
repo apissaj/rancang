@@ -1,8 +1,34 @@
-import type { Dispatch, MutableRefObject, SetStateAction } from "react";
+import { useState, type Dispatch, type MutableRefObject, type SetStateAction } from "react";
 
 export type DocStatus = "pending" | "writing" | "done";
 
 export type Answer = { question: string; selected: string[]; note?: string };
+
+export type DocErrors = Partial<Record<string, string>>;
+
+const DOC_NAMES = ["prd", "spec", "plan", "tasks"] as const;
+const DOC_ERROR_BLOCK = /\n*> \*\*\[(?:generate error|empty document) — (\w+)\]\*\* ([^\n]*)\n*(?:_[^\n]*_\n*)?/g;
+
+export function splitDocError(doc: string, text: string): { content: string; error: string | null } {
+  const errors: string[] = [];
+  const content = text.replace(DOC_ERROR_BLOCK, (match: string, name: string, message: string) => {
+    if (name !== doc) return match;
+    errors.push(message);
+    return "";
+  });
+  return { content, error: errors[0] ?? null };
+}
+
+export function splitAllDocErrors(docs: Record<string, string>): { docs: Record<string, string>; errors: DocErrors } {
+  const cleaned: Record<string, string> = {};
+  const errors: DocErrors = {};
+  for (const doc of DOC_NAMES) {
+    const { content, error } = splitDocError(doc, docs[doc] ?? "");
+    cleaned[doc] = content;
+    if (error) errors[doc] = error;
+  }
+  return { docs: cleaned, errors };
+}
 
 export function usePlanStream({
   setDocs,
@@ -17,6 +43,8 @@ export function usePlanStream({
   partialRef: MutableRefObject<{ markdown: string; docs: Record<string, string> }>;
   getSignal: () => AbortSignal | undefined;
 }) {
+  const [docErrors, setDocErrors] = useState<DocErrors>({});
+
   const streamMultiDocs = async (ideaText: string, selectedModel: string, answers: Answer[] | undefined) => {
     const res = await fetch("/api/plan/full", {
       method: "POST",
@@ -93,11 +121,30 @@ export function usePlanStream({
     // First re-scan the tail for markers that were held back across chunks.
     buffer = processBuffer(buffer);
     if (buffer.trim()) collected[currentDoc] += buffer;
+    const { docs: cleaned, errors } = splitAllDocErrors(collected);
+    Object.assign(collected, cleaned);
+    setDocErrors(errors);
     setDocs({ ...collected });
     setDocStatus({ prd: "done", spec: "done", plan: "done", tasks: "done" });
     partialRef.current = { markdown: collected.prd, docs: { ...collected } };
     return collected;
   };
 
-  return { streamMultiDocs };
+  const fetchSingleDoc = async (doc: string, ideaText: string, selectedModel: string) => {
+    const res = await fetch("/api/plan/full", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ idea: ideaText, model: selectedModel }),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    const text = await res.text();
+    const open = `<!-- DOC:${doc} -->`;
+    const close = `<!-- /DOC:${doc} -->`;
+    const from = text.indexOf(open);
+    const to = text.indexOf(close);
+    if (from === -1 || to === -1 || to < from) throw new Error(`Bagian ${doc} tidak ditemukan dalam respons.`);
+    return splitDocError(doc, text.slice(from + open.length, to));
+  };
+
+  return { streamMultiDocs, fetchSingleDoc, docErrors, setDocErrors };
 }

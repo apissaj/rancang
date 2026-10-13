@@ -26,7 +26,7 @@ import { useAuth } from "@/components/auth-provider";
 import { SyncIndicator } from "@/components/sync-indicator";
 import { AuthGate } from "@/components/auth-gate";
 import { useTypewriter } from "@/hooks/use-typewriter";
-import { usePlanStream, type Answer, type DocStatus } from "@/hooks/use-plan-stream";
+import { usePlanStream, splitAllDocErrors, type Answer, type DocStatus } from "@/hooks/use-plan-stream";
 import { useMcpPublish } from "@/hooks/use-mcp-publish";
 
 const TEMPLATES = [
@@ -150,13 +150,14 @@ export default function PlanPage() {
     if (sync.status === "synced") setPlans(planStore.all());
   }, [sync.status]);
 
-  const { streamMultiDocs } = usePlanStream({
+  const { streamMultiDocs, fetchSingleDoc, docErrors, setDocErrors } = usePlanStream({
     setDocs,
     setDocStatus,
     manualDocRef,
     partialRef,
     getSignal: () => abortRef.current?.signal,
   });
+  const [retryingDoc, setRetryingDoc] = useState<PreviewDoc | null>(null);
 
   const generatePrd = async (answers?: Answer[]) => {
     setError(null);
@@ -181,6 +182,8 @@ export default function PlanPage() {
     setLoading(true);
     setDocs({});
     setDocStatus({});
+    setDocErrors({});
+    setRetryingDoc(null);
     resetTypeCursor();
     setTypingActive(true);
     abortRef.current = new AbortController();
@@ -262,6 +265,7 @@ export default function PlanPage() {
     setTypingActive(false);
     setDocStatus({});
     setError(null);
+    setRetryingDoc(null);
   };
 
   const submitAnswers = (answers: QuestionAnswers) => {
@@ -290,11 +294,14 @@ export default function PlanPage() {
     setActiveId(id);
     setIdea(plan.idea);
     setTypingActive(false);
-    setDocs(plan.docs ?? {});
+    const cleaned = splitAllDocErrors(plan.docs ?? {});
+    setDocs(plan.docs ? cleaned.docs : {});
     setActiveDoc("prd");
     setDocStatus({});
     setError(null);
     setClarify(null);
+    setDocErrors(cleaned.errors);
+    setRetryingDoc(null);
     // Restore the MCP blueprint id saved on the record (if any) so the
     // "Salin Prompt MCP" button reappears after reload/plan-switch; older
     // records that predate persistence just fall back to re-publishing.
@@ -325,6 +332,8 @@ export default function PlanPage() {
     setClarifying(false);
     setActiveDoc("prd");
     manualDocRef.current = false;
+    setDocErrors({});
+    setRetryingDoc(null);
   };
 
   const handleDelete = (id: string) => {
@@ -339,6 +348,8 @@ export default function PlanPage() {
       setDocStatus({});
       setClarify(null);
       setError(null);
+      setDocErrors({});
+      setRetryingDoc(null);
     }
     setClarifying(false);
     toastManager.add({
@@ -365,6 +376,39 @@ export default function PlanPage() {
     }
   });
   const activeStatus = displayStatus[activeDoc as PreviewDoc];
+  const activeDocError = docErrors[activeDoc];
+  const canRetry = !loading && !clarifying && !typing && !retryingDoc && !!activePlan;
+
+  const retryDoc = async (doc: PreviewDoc) => {
+    if (!activePlan || retryingDoc) return;
+    const plan = activePlan;
+    setRetryingDoc(doc);
+    try {
+      const { content, error: docError } = await fetchSingleDoc(doc, plan.idea, modelRef.current);
+      if (docError) {
+        setDocErrors((prev) => ({ ...prev, [doc]: docError }));
+        return;
+      }
+      if (!content.trim()) {
+        setDocErrors((prev) => ({ ...prev, [doc]: "Model tidak mengembalikan isi." }));
+        return;
+      }
+      const nextDocs = { ...(plan.docs ?? {}), [doc]: content };
+      const record: PlanRecord = {
+        ...plan,
+        docs: nextDocs,
+        markdown: doc === "prd" ? content : plan.markdown,
+      };
+      planStore.save(record);
+      setPlans(planStore.all());
+      setDocs(nextDocs);
+      setDocErrors((prev) => ({ ...prev, [doc]: undefined }));
+    } catch (err) {
+      setDocErrors((prev) => ({ ...prev, [doc]: err instanceof Error ? err.message : "Gagal membuat ulang dokumen." }));
+    } finally {
+      setRetryingDoc(null);
+    }
+  };
 
   useEffect(() => {
     if (!writingDoc || manualDocRef.current) return;
@@ -561,6 +605,26 @@ export default function PlanPage() {
               </>
             }
           >
+            <div className="space-y-3">
+            {activeDocError && (
+              <div className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="min-w-0">
+                    Dokumen {activeDoc.toUpperCase()} gagal dibuat: {activeDocError}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => retryDoc(activeDoc as PreviewDoc)}
+                    disabled={!canRetry}
+                    title={canRetry ? `Buat ulang dokumen ${activeDoc.toUpperCase()}` : "Tunggu proses selesai"}
+                  >
+                    {retryingDoc === activeDoc && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                    Coba lagi {activeDoc.toUpperCase()}
+                  </Button>
+                </div>
+              </div>
+            )}
             {typing && activeStatus !== "done" && !activeContent.trim() ? (
               <div className="flex h-full min-h-[300px] flex-col items-center justify-center gap-3 p-8 text-center">
                 <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
@@ -596,6 +660,7 @@ export default function PlanPage() {
                 </div>
               </div>
             )}
+            </div>
           </PreviewWindow>
         </div>
       </div>
