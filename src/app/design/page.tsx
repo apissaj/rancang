@@ -16,7 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Markdown } from "@/components/markdown";
 import { DesignSidebar } from "@/components/design/design-sidebar";
 import { WireframeCanvas, MockupCanvas } from "@/components/design/wireframe-canvas";
-import { designStore, planStore, type DesignRecord, type DesignVersion, type Screen } from "@/lib/storage";
+import { designStore, planStore, type DesignRecord, type DesignVersion, type PlanRecord, type Screen } from "@/lib/storage";
 import { buildHifiReadme, buildWireframeExport, planLabel, screenFileName } from "@/lib/design-export";
 import { useSync } from "@/lib/use-sync";
 import { useAuth } from "@/components/auth-provider";
@@ -96,7 +96,7 @@ function DesignPageInner() {
   const sync = useSync();
   const searchParams = useSearchParams();
   const { storageVersion } = useAuth();
-  const plans = planStore.all();
+  const [plans, setPlans] = useState<PlanRecord[]>([]);
 
   // Clears the working state back to a blank setup form. Used both by the manual
   // "New design" button and by the storageVersion effect (identity switch).
@@ -115,6 +115,7 @@ function DesignPageInner() {
 
   useEffect(() => {
     setDesigns(designStore.all());
+    setPlans(planStore.all());
     resetToSetup();
     const planId = searchParams.get("planId");
     if (planId) {
