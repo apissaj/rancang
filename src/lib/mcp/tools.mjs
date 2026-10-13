@@ -64,6 +64,14 @@ function checkArgs(schema, args) {
   const props = schema.properties ?? {};
   const required = schema.required ?? [];
 
+  // Agents often send the parameter as `blueprint_id`. Accept it as an alias
+  // for `id` instead of silently ignoring it, which made every call fall back
+  // to the most recent blueprint.
+  if (props.id && input.id === undefined && input.blueprint_id !== undefined) {
+    input.id = input.blueprint_id;
+  }
+  delete input.blueprint_id;
+
   for (const key of required) {
     if (input[key] === undefined || input[key] === null || input[key] === "") {
       throw new Error(`Missing required argument: ${key}`);
