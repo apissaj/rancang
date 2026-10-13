@@ -9,7 +9,8 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint src",
     "test": "node scripts/run-tests.mjs",
-    "cli": "node src/rancang-cli.mjs"
+    "cli": "node src/rancang-cli.mjs",
+    "services": "powershell -ExecutionPolicy Bypass -File scripts/dev-services.ps1"
   },
   "bin": {
     "rancang": "./src/rancang-cli.mjs"
