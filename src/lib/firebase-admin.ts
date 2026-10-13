@@ -57,7 +57,8 @@ export function sanitizeDesignForFirestore<T extends { screens?: unknown[]; vers
     screens?.map((s) => {
       const screen = s as { generatedImage?: string };
       if (typeof screen.generatedImage === "string" && screen.generatedImage.startsWith("data:")) {
-        const { generatedImage: _drop, ...rest } = screen;
+        const rest = { ...screen };
+        delete rest.generatedImage;
         return rest;
       }
       return screen;

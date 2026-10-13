@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/components/auth-provider";
-import { conversationStore, planStore, designStore, type Conversation, type PlanRecord, type DesignRecord } from "@/lib/storage";
+import { conversationStore, planStore, designStore, type PlanRecord, type DesignRecord } from "@/lib/storage";
 export type SyncStatus = "idle" | "syncing" | "synced";
 async function authedFetch(user: NonNullable<ReturnType<typeof useAuth>["user"]>, url: string, init?: RequestInit) {
   const token = await user.getIdToken();

@@ -177,7 +177,7 @@ export type DesignRecord = {
   mcpId?: string;
 };
 
-const DESIGN_LIMIT = 5;
+const DESIGN_LIMIT = 20;
 
 function designKey() {
   return `rancang:${scope}:designs`;
