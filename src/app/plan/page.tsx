@@ -48,6 +48,7 @@ export default function PlanPage() {
   const [plans, setPlans] = useState<PlanRecord[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [clarifying, setClarifying] = useState(false);
+  const [clarifyElapsed, setClarifyElapsed] = useState(0);
   const [clarify, setClarify] = useState<ClarifyResponse | null>(null);
   const sync = useSync();
   const { storageVersion } = useAuth();
@@ -145,6 +146,19 @@ export default function PlanPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [storageVersion]);
+
+  useEffect(() => {
+    if (!clarifying) {
+      setClarifyElapsed(0);
+      return;
+    }
+    const id = setInterval(() => {
+      setClarifyElapsed((s) => s + 1);
+    }, 1000);
+    return () => {
+      clearInterval(id);
+    };
+  }, [clarifying]);
 
   // Refresh the list after Firestore merge lands in localStorage.
   useEffect(() => {
@@ -281,6 +295,12 @@ export default function PlanPage() {
   };
 
   const skipClarify = () => {
+    // Skip can be triggered while the clarify fetch is still in flight (the
+    // "Lewati, langsung buat" hint). Abort it so startGenerate's resolve can't
+    // start a second generation or reopen the questions.
+    abortRef.current?.abort();
+    abortRef.current = null;
+    setClarifying(false);
     setClarify(null);
     generatePrd();
   };
@@ -540,8 +560,27 @@ export default function PlanPage() {
               className="w-full"
             >
               {(loading || clarifying) && <Loader2 className="h-4 w-4 animate-spin" />}
-              {clarifying ? "Menganalisis ide kamu..." : loading ? "Membuat..." : "Buat PRD"}
+              {clarifying
+                ? `Menganalisis ide kamu... (${clarifyElapsed}s)`
+                : loading
+                  ? "Membuat..."
+                  : "Buat PRD"}
             </Button>
+          )}
+          {clarifying && clarifyElapsed >= 12 && (
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+              <span className="text-xs text-muted-foreground">
+                Masih menganalisis. Kamu bisa lewati klarifikasi dan langsung membuat PRD.
+              </span>
+              <Button
+                variant="link"
+                size="sm"
+                onClick={skipClarify}
+                className="h-auto min-w-0 whitespace-normal p-0 text-left"
+              >
+                Lewati, langsung buat
+              </Button>
+            </div>
           )}
           {(loading || clarifying) && (
             <Button
