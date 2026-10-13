@@ -19,7 +19,7 @@ export function useMcpPublish({
   // Push a finished blueprint to the MCP bridge so coding agents (Claude Code,
   // Cursor, Codex, Hermes) can pull it via the rancang_* MCP tools. Runs in the
   // background: local generation must never fail because the bridge is down.
-  const publishMCP = async (record: PlanRecord, opts?: { silent?: boolean }) => {
+  const publishMCP = async (record: PlanRecord, opts?: { silent?: boolean; onPublished?: (record: PlanRecord) => void }) => {
     if (!record.docs || Object.keys(record.docs).length === 0) return;
     try {
       const res = await fetch("/api/mcp/blueprint", {
@@ -49,10 +49,10 @@ export function useMcpPublish({
       setMcpBlueprintId(data.id);
       // Persist the bridge-assigned id on the record so a page reload or plan
       // switch can restore the "Salin Prompt MCP" button without re-publishing.
-      if (data.id !== record.mcpId) {
-        const stored = planStore.all().find((p) => p.id === record.id);
-        if (stored) planStore.save({ ...stored, mcpId: data.id });
-      }
+      const stored = planStore.all().find((p) => p.id === record.id);
+      const updated: PlanRecord = { ...(stored ?? record), mcpId: data.id };
+      if (stored && data.id !== record.mcpId) planStore.save(updated);
+      opts?.onPublished?.(updated);
       if (!opts?.silent) setMcpCopied(true);
     } catch {
       if (!opts?.silent) setError("Blueprint tersimpan lokal, tapi MCP bridge tidak jalan (port 3110?).");

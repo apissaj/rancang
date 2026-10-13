@@ -198,7 +198,7 @@ export default function PlanPage() {
       setActiveId(record.id);
       sync.syncPlan(record);
       setIdea("");
-      void publishMCP(record, { silent: true });
+      void publishMCP(record, { silent: true, onPublished: (r) => sync.syncPlan(r) });
     } catch (err) {
       setTypingActive(false);
       const aborted = (err as Error | undefined)?.name === "AbortError";
@@ -321,7 +321,7 @@ export default function PlanPage() {
     const verify = new AbortController();
     mcpVerifyRef.current = verify;
     const republish = () => {
-      if (plan.docs && Object.keys(plan.docs).length > 0) void publishMCP(plan, { silent: true });
+      if (plan.docs && Object.keys(plan.docs).length > 0) void publishMCP(plan, { silent: true, onPublished: (r) => sync.syncPlan(r) });
     };
     if (!mcpId) {
       republish();

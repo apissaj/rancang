@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/components/auth-provider";
 import { conversationStore, planStore, designStore, type PlanRecord, type DesignRecord } from "@/lib/storage";
+import { mergePlan, shouldTakeRemote } from "@/lib/sync-merge";
 export type SyncStatus = "idle" | "syncing" | "synced";
 async function authedFetch(user: NonNullable<ReturnType<typeof useAuth>["user"]>, url: string, init?: RequestInit) {
   const token = await user.getIdToken();
@@ -55,8 +56,7 @@ export function useSync() {
           const { plans } = (await plansRes.json()) as { plans: PlanRecord[] };
           for (const remote of plans) {
             const local = planStore.all().find((p) => p.id === remote.id);
-            if (!local) planStore.save(remote);
-            else if (remote.createdAt >= local.createdAt) planStore.save({ ...remote, mcpId: local.mcpId ?? remote.mcpId });
+            if (shouldTakeRemote(local, remote)) planStore.save(mergePlan(local, remote));
           }
         }
         if (designsRes.ok) {
