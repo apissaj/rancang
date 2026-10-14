@@ -31,6 +31,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScaffoldDialog } from "@/components/scaffold-dialog";
 import { AppNav } from "@/components/layout/top-nav";
+import { AuthGate } from "@/components/auth-gate";
 
 /* ── Types ─────────────────────────────────────────────── */
 
@@ -481,6 +482,7 @@ export default function ProjectsPage() {
   const overallPercent = totalTasks > 0 ? Math.round((totalDone / totalTasks) * 100) : 0;
 
   return (
+    <AuthGate>
     <div className="flex flex-1 flex-col overflow-hidden lg:h-dvh lg:flex-row">
       <div className="flex w-full shrink-0 flex-col border-b bg-muted/20 lg:h-full lg:w-72 lg:border-b-0 lg:border-r">
         <AppNav />
@@ -1035,5 +1037,6 @@ export default function ProjectsPage() {
       </div>
       </div>
     </div>
+    </AuthGate>
   );
 }
