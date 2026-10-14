@@ -49,3 +49,8 @@ const byName = (n) => TOOLS.find((t) => t.name === n).inputSchema;
 }
 
 console.log("PASS: mcp tools argument handling");
+import { parseTasks as _pt } from "./store.mjs";
+const _pos = _pt("- [ ] E2E-1 Buat file pertama\n- [ ] SET-1 Setup\n- [ ] US1-T1 [P] Buat");
+assert.deepStrictEqual(_pos.map((t) => t.id), ["E2E-1", "SET-1", "US1-T1"], "mixed ids must parse");
+const _neg = _pt("- Buat file pertama tanpa id\n- Setup config\n- Gunakan Next.js");
+assert.deepStrictEqual(_neg, [], "prose lines must NOT become tasks");

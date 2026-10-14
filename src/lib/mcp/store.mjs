@@ -149,12 +149,20 @@ const CHECKBOX_RE = /^\[\s*([xX]?)\s*\]\s*/;
 const BRACKET_RE = /^\[([^\]]*)\]\s*/;
 const BOLD_RE = /^\*\*([^*]+)\*\*\s*/;
 const TICK_RE = /^`([^`]+)`\s*/;
-const ID_RE = /^((?:[A-Za-z]{1,6}\d*-)?(?:[A-Za-z]{1,6})?\d+(?:[.-](?:[A-Za-z]{1,6})?\d+)*)\b/;
+// A task id is a short token that STARTS with a letter (or is pure digits),
+// may contain letters+digits mixed (E2E-1, SET-1, US1-T1, T001, F1), and MUST
+// contain at least one digit. Requiring a digit is what keeps prose lines like
+// "Buat file pertama" or "Setup config" from being mistaken for tasks — the
+// original pattern (letters-then-digit) missed mixed ids like E2E-1.
+const TASK_ID_SRC = "(?:[A-Za-z][A-Za-z0-9]*(?:[-.][A-Za-z0-9]+)*|\\d+(?:[.-][A-Za-z0-9]+)*)";
+const HAS_DIGIT = /[0-9]/;
+const ID_RE = new RegExp(`^((?:${TASK_ID_SRC}))\\b`);
 
-/** True when a token is a bare task id (T001, F1, US1-1, PH2) — not prose. */
+/** True when a token is a bare task id (T001, F1, US1-1, SET-1, E2E-1) — not prose. */
 function isTaskId(token) {
   if (!token) return false;
-  return /^(?:[A-Za-z]{1,6}\d*-)?(?:[A-Za-z]{1,6})?\d+(?:[.-](?:[A-Za-z]{1,6})?\d+)*$/i.test(token.trim());
+  const t = token.trim();
+  return HAS_DIGIT.test(t) && new RegExp(`^(?:${TASK_ID_SRC})$`).test(t);
 }
 
 /** Normalize a task bullet to { mark, id, rest } — or null when the line isn't a task. */
@@ -197,7 +205,7 @@ function matchTask(line) {
   }
 
   const idm = ID_RE.exec(s);
-  if (!idm) return null;
+  if (!idm || !isTaskId(idm[1])) return null;
 
   // Everything after the id is the task text — but the id may have been
   // followed by more wrappers ([P], [US1], **, backticks) before the prose
