@@ -145,85 +145,42 @@ export async function POST(req: Request) {
       })
     );
 
-    // Interleave the four upstream streams in arrival order. A bare
-    // `<!-- DOC:x -->` marker is emitted whenever the source document changes,
-    // so the client always knows which section the next bytes belong to. No
-    // surrounding newlines are added mid-document: the client strips markers,
-    // so each section's text must be byte-identical to what its model produced.
+    // Emit the four upstream streams one document at a time. All four are
+    // already being generated in parallel upstream; here we only choose to read
+    // them in order so each `<!-- DOC:x -->` marker lands on a document
+    // boundary. Interleaving them (racing the readers) spliced markers into the
+    // middle of a word — e.g. "A<!-- DOC:plan -->plikasi" — because a chunk of
+    // one document can arrive between two chunks of another. Each document's
+    // bytes must stay contiguous and byte-identical to what its model produced.
     const encoder = new TextEncoder();
-    type Slot = {
-      doc: string;
-      reader: ReadableStreamDefaultReader<Uint8Array>;
-      chars: number;
-      pending?: Promise<Settled>;
-    };
-    type Settled =
-      | { slot: Slot; done: false; value: Uint8Array }
-      | { slot: Slot; done: true; failed?: { message: string } };
     const merged = new ReadableStream<Uint8Array>({
       async start(controller) {
         const emit = (text: string) => controller.enqueue(encoder.encode(text));
-        let current: string | null = null;
-        const open = (doc: string) => {
-          if (current === doc) return;
+        for (const { doc, stream } of streams) {
           emit(`<!-- DOC:${doc} -->`);
-          current = doc;
-        };
-        const close = (doc: string) => {
-          open(doc);
+          const reader = stream.getReader();
+          let chars = 0;
+          try {
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              chars += value.length;
+              controller.enqueue(value);
+            }
+            if (chars === 0) {
+              emit(
+                `\n\n> **[empty document — ${doc}]** The model returned no content for this section.\n\n_Retry, or pick a different model._\n\n`
+              );
+            }
+          } catch (err) {
+            // One document failing must not abort the other three. Its reason is
+            // emitted inline, inside the section it belongs to, so it is never
+            // mistaken for a lazy model that returned nothing.
+            emit(
+              `\n\n> **[generate error — ${doc}]** ${err instanceof Error ? err.message : String(err)}\n\n_Retry this document, or pick a different model._\n\n`
+            );
+          }
           emit(`<!-- /DOC:${doc} -->`);
-          current = null;
-        };
-
-        let active: Slot[] = streams.map(({ doc, stream }) => ({
-          doc,
-          reader: stream.getReader(),
-          chars: 0,
-        }));
-
-        while (active.length > 0) {
-          // Reuse each slot's outstanding read() across iterations: a losing
-          // race must not discard a chunk that was already read.
-          for (const slot of active) {
-            slot.pending ??= slot.reader.read().then(
-              (r): Settled =>
-                r.done
-                  ? { slot, done: true }
-                  : { slot, done: false, value: r.value },
-              (err): Settled => ({
-                slot,
-                done: true,
-                failed: { message: err instanceof Error ? err.message : String(err) },
-              })
-            );
-          }
-          const settled = await Promise.race(active.map((s) => s.pending!));
-          const { slot } = settled;
-          slot.pending = undefined;
-
-          if (!settled.done) {
-            open(slot.doc);
-            slot.chars += settled.value.length;
-            controller.enqueue(settled.value);
-            continue;
-          }
-
-          // One document failing must not abort the other three. Its reason is
-          // emitted inline, inside the section it belongs to, so it is never
-          // mistaken for a lazy model that returned nothing.
-          if (settled.failed) {
-            open(slot.doc);
-            emit(
-              `\n\n> **[generate error — ${slot.doc}]** ${settled.failed.message}\n\n_Retry this document, or pick a different model._\n\n`
-            );
-          } else if (slot.chars === 0) {
-            open(slot.doc);
-            emit(
-              `\n\n> **[empty document — ${slot.doc}]** The model returned no content for this section.\n\n_Retry, or pick a different model._\n\n`
-            );
-          }
-          close(slot.doc);
-          active = active.filter((s) => s !== slot);
         }
         controller.close();
       },
