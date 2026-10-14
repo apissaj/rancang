@@ -31,15 +31,24 @@ export function getAdminAuth() {
   return getAuth();
 }
 
-let dbConfigured = false;
+// Firestore.settings() may only be called once per process, before any other
+// method. A module-level flag is not enough: Next.js hot reload rebuilds this
+// module (resetting the flag) while the underlying Firestore instance persists,
+// so settings() would run a second time and throw. Track it on globalThis and
+// swallow the "already initialized" case to stay safe across reloads.
+const globalRef = globalThis as unknown as { __rancangDbConfigured?: boolean };
 
 export function getAdminDb() {
   const db = getFirestore();
   // NAS/tunnel network drops long-lived gRPC (HTTP/2) streams -> DEADLINE_EXCEEDED after 60s.
   // Force REST transport (plain HTTPS request/response) instead. Must be set before first use.
-  if (!dbConfigured) {
-    dbConfigured = true;
-    db.settings({ preferRest: true, ignoreUndefinedProperties: true });
+  if (!globalRef.__rancangDbConfigured) {
+    try {
+      db.settings({ preferRest: true, ignoreUndefinedProperties: true });
+    } catch (err) {
+      console.warn("[firebase-admin] settings() skipped:", err instanceof Error ? err.message : String(err));
+    }
+    globalRef.__rancangDbConfigured = true;
   }
   return db;
 }
