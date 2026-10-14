@@ -14,7 +14,7 @@ const columns = [
   {
     title: "Sumber",
     links: [
-      { label: "Dokumentasi", href: "/plan" },
+      { label: "Dokumentasi", href: "https://github.com/apissaj/rancang#readme" },
       { label: "GitHub", href: "https://github.com/apissaj/rancang" },
     ],
   },
@@ -72,7 +72,7 @@ export default function Footer() {
               © {new Date().getFullYear()} Rancang · Dibuat untuk coding agent.
             </p>
             <p className="text-xs text-muted-foreground">
-              Tanpa akun · Tanpa database · Data di browser kamu.
+              Autentikasi Google · Penyimpanan per akun · Sinkronisasi cloud.
             </p>
           </div>
         </div>

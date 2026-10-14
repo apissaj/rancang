@@ -7,7 +7,7 @@ export default function HeroBand() {
     "Multi-Model",
     "Streaming",
     "Gateway Sendiri",
-    "Tanpa Akun",
+    "Login Google",
   ];
 
   const row = [...items, ...items];

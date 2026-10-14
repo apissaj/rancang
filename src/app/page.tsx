@@ -46,7 +46,7 @@ const tools = [
       icon: Cpu,
       title: "Gateway Sendiri",
       description:
-        "Semua jalan lewat gateway LLM milikmu. Tanpa akun, tanpa database, data tersimpan aman di browser.",
+        "Semua jalan lewat gateway LLM milikmu. Login Google untuk data per akun dan sinkronisasi cloud, atau pakai tanpa akun dengan data di browser.",
       cta: "Mulai",
     },
   ];
@@ -84,7 +84,7 @@ export default function Home() {
               <p className="mt-6 max-w-xl text-lg leading-relaxed text-muted-foreground">
                 Ubah ide kasar jadi PRD, spesifikasi, rencana, dan tasks — lewat
                 MCP server. Coding agent tinggal ambil blueprint dan eksekusi.
-                Tanpa akun, tanpa database, data di browser kamu.
+                Masuk dengan Google untuk data per akun dan sinkronisasi cloud.
               </p>
             </Reveal>
             <Reveal start={ready} delay={400}>

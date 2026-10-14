@@ -23,7 +23,7 @@ export default function CTASection() {
             </h2>
             <p className="mt-4 text-lg leading-relaxed text-muted-foreground">
               Tulis ide kasar, biarkan Rancang menyusun PRD, spesifikasi, rencana,
-              dan tasks — siap dikerjakan coding agent apa pun. Gratis, tanpa akun.
+              dan tasks — siap dikerjakan coding agent apa pun. Masuk dengan Google untuk data per akun dan sinkronisasi cloud.
             </p>
             <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
               <Button nativeButton={false} render={<Link href="/plan" />} className="h-12 px-8 text-base">

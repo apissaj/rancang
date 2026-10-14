@@ -4,7 +4,7 @@ import Reveal from "@/components/effects/reveal";
 const faqs = [
   {
     q: "Butuh API key sendiri?",
-    a: "Tidak wajib. Rancang jalan lewat gateway LLM milikmu (9Router/ZenProxy) yang sudah dikonfigurasi. Tinggal pilih model dan pakai — tanpa akun, tanpa kartu kredit.",
+    a: "Tidak wajib. Rancang jalan lewat gateway LLM milikmu (9Router/ZenProxy) yang sudah dikonfigurasi. Tinggal pilih model dan pakai.",
   },
   {
     q: "Apa bedanya sama nulis PRD manual?",
@@ -12,7 +12,7 @@ const faqs = [
   },
   {
     q: "Data saya aman nggak?",
-    a: "Semua data tersimpan di browser kamu (localStorage). Nggak ada database, nggak ada server yang nyimpen ide atau PRD kamu — kecuali kamu ekspor sendiri.",
+    a: "Halaman generator memakai autentikasi Google. Data tersimpan per akun dan disinkronkan ke cloud (Firestore). Tanpa konfigurasi Firebase, data disimpan di localStorage browser kamu.",
   },
   {
     q: "Hasilnya bisa dipakai di coding agent apa aja?",

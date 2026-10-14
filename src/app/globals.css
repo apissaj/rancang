@@ -168,3 +168,10 @@
     }
   }
 }
+
+@media (scripting: none) {
+  .opacity-0 {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
