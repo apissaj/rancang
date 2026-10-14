@@ -10,7 +10,7 @@ const steps = [
   {
     icon: FileText,
     title: "Jawab konteks",
-    desc: "Lima pertanyaan singkat atau lewati saja. Rancang butuh cukup konteks untuk menyusun PRD yang relevan.",
+    desc: "Beberapa pertanyaan singkat, atau lewati saja. Rancang butuh cukup konteks untuk menyusun PRD yang relevan.",
   },
   {
     icon: Sparkles,

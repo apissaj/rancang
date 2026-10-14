@@ -15,7 +15,7 @@ const columns = [
     title: "Sumber",
     links: [
       { label: "Dokumentasi", href: "/plan" },
-      { label: "GitHub", href: "https://github.com" },
+      { label: "GitHub", href: "https://github.com/apissaj/rancang" },
     ],
   },
 ];
