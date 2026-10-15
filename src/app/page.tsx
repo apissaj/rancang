@@ -68,7 +68,7 @@ export default function Home() {
         >
         {/* Hero: asymmetric, heavy left column */}
         <section className="grid gap-12 lg:grid-cols-12 lg:gap-8">
-          <div className="lg:col-span-7">
+          <div className="min-w-0 lg:col-span-7">
             <Reveal start={ready} delay={100}>
               <p className="mb-4 inline-flex items-center gap-2 rounded-sm border border-border bg-muted px-3 py-1 text-xs font-medium uppercase tracking-wider text-muted-foreground">
                 <span className="size-1.5 rounded-full bg-muted-foreground/60" />
@@ -76,12 +76,12 @@ export default function Home() {
               </p>
             </Reveal>
             <Reveal start={ready} delay={200}>
-              <h1 className="mt-4 text-5xl font-bold tracking-tighter text-balance text-foreground sm:text-6xl lg:text-7xl">
+              <h1 className="mt-4 text-5xl font-bold tracking-tighter text-balance text-white sm:text-6xl lg:text-7xl">
                 Ubah ide jadi blueprint, siap dikerjakan AI.
               </h1>
             </Reveal>
             <Reveal start={ready} delay={300}>
-              <p className="mt-6 max-w-xl text-lg leading-relaxed text-muted-foreground">
+              <p className="mt-6 max-w-xl text-lg leading-relaxed text-white/75">
                 Ubah ide kasar jadi PRD, spesifikasi, rencana, dan tasks — lewat
                 MCP server. Coding agent tinggal ambil blueprint dan eksekusi.
                 Masuk dengan Google untuk data per akun dan sinkronisasi cloud.
@@ -97,7 +97,7 @@ export default function Home() {
           </div>
 
           {/* Right visual: VSCode-style blueprint window */}
-                    <div className="flex items-center lg:col-span-5">
+                    <div className="flex min-w-0 items-center lg:col-span-5">
                       <Reveal start={ready} delay={350} className="w-full">
                         <div className="w-full overflow-hidden rounded-sm border border-border bg-card shadow-[0_8px_30px_rgba(0,0,0,0.12)]">
                           {/* macOS title bar */}
