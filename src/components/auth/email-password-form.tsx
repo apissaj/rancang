@@ -66,7 +66,7 @@ export function EmailPasswordForm({ mode, onSuccess }: Props) {
   if (forgot) {
     return (
       <form onSubmit={handleForgot} className="flex flex-col gap-4">
-        <div className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-2">
           <Label htmlFor="reset-email">Email</Label>
           <Input
             id="reset-email"
@@ -75,10 +75,11 @@ export function EmailPasswordForm({ mode, onSuccess }: Props) {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             autoComplete="email"
+            className="h-10 px-3.5 text-sm"
             required
           />
         </div>
-        <Button type="submit" disabled={submitting} className="w-full">
+        <Button type="submit" size="lg" disabled={submitting} className="mt-1 w-full">
           {submitting && <Loader2 className="size-4 animate-spin" />}
           Send reset link
         </Button>
@@ -95,7 +96,7 @@ export function EmailPasswordForm({ mode, onSuccess }: Props) {
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-      <div className="flex flex-col gap-1.5">
+      <div className="flex flex-col gap-2">
         <Label htmlFor="email">Email</Label>
         <Input
           id="email"
@@ -104,10 +105,11 @@ export function EmailPasswordForm({ mode, onSuccess }: Props) {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           autoComplete="email"
+          className="h-10 px-3.5 text-sm"
           required
         />
       </div>
-      <div className="flex flex-col gap-1.5">
+      <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between">
           <Label htmlFor="password">Password</Label>
           {mode === "signin" && (
@@ -130,11 +132,12 @@ export function EmailPasswordForm({ mode, onSuccess }: Props) {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           autoComplete={mode === "signup" ? "new-password" : "current-password"}
+          className="h-10 px-3.5 text-sm"
           minLength={mode === "signup" ? 6 : undefined}
           required
         />
       </div>
-      <Button type="submit" disabled={submitting} className="w-full">
+      <Button type="submit" size="lg" disabled={submitting} className="mt-1 w-full">
         {submitting && <Loader2 className="size-4 animate-spin" />}
         {submitting
           ? submittingLabel

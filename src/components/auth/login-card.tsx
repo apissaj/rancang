@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { Hammer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -32,24 +33,28 @@ export function LoginCard() {
   if (loading) return null;
 
   return (
-    <div className="flex min-h-[calc(100vh-3.5rem)] items-center justify-center px-4 py-16">
-      <Card className="w-full max-w-sm bg-card/80 backdrop-blur">
-        <CardHeader>
-          <CardTitle className="text-xl">
+    <div className="flex w-full min-h-[calc(100vh-3.5rem)] items-center justify-center px-4 py-14">
+      <Card className="w-full max-w-md bg-card/85 p-0 shadow-2xl backdrop-blur-xl sm:max-w-lg">
+        <CardHeader className="gap-2 px-8 pt-8 pb-6">
+          <div className="mb-1 flex items-center gap-2 text-base font-semibold tracking-tight">
+            <Hammer className="size-4.5 text-primary" />
+            Rancang
+          </div>
+          <CardTitle className="text-2xl leading-tight font-semibold tracking-tight">
             {tabs === "signup" ? "Create your account" : "Sign in to Rancang"}
           </CardTitle>
-          <CardDescription>
+          <CardDescription className="text-base leading-relaxed">
             {tabs === "signup"
               ? "Start turning your ideas into actionable blueprints."
               : "Welcome back. Sign in to continue to your workspace."}
           </CardDescription>
         </CardHeader>
-        <CardContent className="flex flex-col gap-5">
+        <CardContent className="flex flex-col gap-6 px-8 pb-8">
           <div className="grid grid-cols-2 gap-1 rounded-lg bg-muted p-1" role="tablist">
             <Button
               type="button"
               variant={tabs === "signin" ? "default" : "ghost"}
-              size="sm"
+              size="lg"
               aria-pressed={tabs === "signin"}
               onClick={() => setTabs("signin")}
             >
@@ -58,7 +63,7 @@ export function LoginCard() {
             <Button
               type="button"
               variant={tabs === "signup" ? "default" : "ghost"}
-              size="sm"
+              size="lg"
               aria-pressed={tabs === "signup"}
               onClick={() => setTabs("signup")}
             >
@@ -78,7 +83,8 @@ export function LoginCard() {
               <Button
                 type="button"
                 variant="outline"
-                className={cn("w-full gap-2")}
+                size="lg"
+                className={cn("w-full gap-2.5 py-2.5 text-[0.95rem]")}
                 onClick={() => signIn()}
               >
                 <GoogleIcon />
