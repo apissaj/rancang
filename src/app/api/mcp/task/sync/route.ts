@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { syncTasksFromMarkdown, summarizeTasks, resolveBlueprint } from "@/lib/mcp/store.mjs";
+import { rateLimiter } from "@/lib/rate-limit";
+
+const limiter = rateLimiter(30, 60_000);
 
 export async function POST(req: NextRequest) {
+  const limited = limiter.check(req);
+  if (limited) return limited;
   try {
     const body = await req.json();
     const blueprintId = body.blueprintId || body.blueprint_id;
