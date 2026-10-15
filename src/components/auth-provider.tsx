@@ -43,14 +43,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
     const currentAuth = auth;
-    setPersistence(currentAuth, browserLocalPersistence)
-      .catch((error: unknown) => {
-        console.error("Failed to set auth persistence", (error as { code?: string })?.code);
-      })
-      .then(() => getRedirectResult(currentAuth))
-      .catch((error: unknown) => {
-        console.error("Redirect sign-in failed", (error as { code?: string })?.code);
-      });
+    getRedirectResult(currentAuth).catch((error: unknown) => {
+      console.error("Redirect sign-in failed", (error as { code?: string })?.code);
+    });
     const unsub = onAuthStateChanged(currentAuth, (u) => {
       // Switch the localStorage namespace the moment identity changes, BEFORE
       // any component re-reads chats/plans, so anon and per-user data never mix.
@@ -64,6 +59,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = async () => {
     if (!firebaseEnabled || !auth) return;
+    await setPersistence(auth, browserLocalPersistence);
     await signInWithRedirect(auth, new GoogleAuthProvider());
   };
 
