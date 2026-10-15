@@ -23,12 +23,22 @@ export default function LandingBackground() {
       {!imageFailed && (
         <>
           <Image
+            src="/hero-bg-light.webp"
+            alt=""
+            fill
+            priority
+            sizes="100vw"
+            className="object-cover dark:hidden"
+            quality={80}
+            onError={() => setImageFailed(true)}
+          />
+          <Image
             src="/hero-bg.webp"
             alt=""
             fill
             priority
             sizes="100vw"
-            className="object-cover"
+            className="hidden object-cover dark:block"
             quality={80}
             onError={() => setImageFailed(true)}
           />

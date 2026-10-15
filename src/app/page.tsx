@@ -76,12 +76,12 @@ export default function Home() {
               </p>
             </Reveal>
             <Reveal start={ready} delay={200}>
-              <h1 className="mt-4 text-5xl font-bold tracking-tighter text-balance text-white sm:text-6xl lg:text-7xl">
+              <h1 className="mt-4 text-5xl font-bold tracking-tighter text-balance text-foreground sm:text-6xl lg:text-7xl">
                 Ubah ide jadi blueprint, siap dikerjakan AI.
               </h1>
             </Reveal>
             <Reveal start={ready} delay={300}>
-              <p className="mt-6 max-w-xl text-lg leading-relaxed text-white/75">
+              <p className="mt-6 max-w-xl text-lg leading-relaxed text-muted-foreground">
                 Ubah ide kasar jadi PRD, spesifikasi, rencana, dan tasks — lewat
                 MCP server. Coding agent tinggal ambil blueprint dan eksekusi.
                 Masuk dengan Google untuk data per akun dan sinkronisasi cloud.
