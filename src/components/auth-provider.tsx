@@ -2,9 +2,12 @@
 
 import { createContext, useContext, useEffect, useState } from "react";
 import {
+  browserLocalPersistence,
   GoogleAuthProvider,
+  getRedirectResult,
   onAuthStateChanged,
-  signInWithPopup,
+  setPersistence,
+  signInWithRedirect,
   signOut as firebaseSignOut,
   type User,
 } from "firebase/auth";
@@ -39,7 +42,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setStorageScope(null);
       return;
     }
-    const unsub = onAuthStateChanged(auth, (u) => {
+    const currentAuth = auth;
+    setPersistence(currentAuth, browserLocalPersistence)
+      .catch((error: unknown) => {
+        console.error("Failed to set auth persistence", (error as { code?: string })?.code);
+      })
+      .then(() => getRedirectResult(currentAuth))
+      .catch((error: unknown) => {
+        console.error("Redirect sign-in failed", (error as { code?: string })?.code);
+      });
+    const unsub = onAuthStateChanged(currentAuth, (u) => {
       // Switch the localStorage namespace the moment identity changes, BEFORE
       // any component re-reads chats/plans, so anon and per-user data never mix.
       setStorageScope(u ? u.uid : null);
@@ -52,7 +64,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = async () => {
     if (!firebaseEnabled || !auth) return;
-    await signInWithPopup(auth, new GoogleAuthProvider());
+    await signInWithRedirect(auth, new GoogleAuthProvider());
   };
 
   const signOut = async () => {
