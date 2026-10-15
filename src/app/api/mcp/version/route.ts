@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { mcpGuard } from "@/lib/mcp-guard";
 import { saveBlueprintVersion } from "@/lib/mcp/store.mjs";
 import { rateLimiter } from "@/lib/rate-limit";
 
@@ -11,6 +12,8 @@ const limiter = rateLimiter(60, 60_000);
  * Snapshot the blueprint's docs as a new version before a significant change.
  */
 export async function POST(req: NextRequest) {
+  const blocked = mcpGuard();
+  if (blocked) return blocked;
   const limited = limiter.check(req);
   if (limited) return limited;
 

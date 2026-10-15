@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { mcpGuard } from "@/lib/mcp-guard";
 import { indexCodebase, buildCodebaseContext } from "@/lib/sync";
 import { resolveAllowedDir } from "@/lib/scaffold";
 import { rateLimiter } from "@/lib/rate-limit";
@@ -11,6 +12,8 @@ const limiter = rateLimiter(10, 60_000);
  * Indexes the codebase and returns context summary for coding agents.
  */
 export async function GET(req: NextRequest) {
+  const blocked = mcpGuard();
+  if (blocked) return blocked;
   const limited = limiter.check(req);
   if (limited) return limited;
 

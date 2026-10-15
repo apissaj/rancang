@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { mcpGuard } from "@/lib/mcp-guard";
 import { scaffoldProject, resolveAllowedDir, AgentFormat } from "@/lib/scaffold";
 import { getRecommendedFormat } from "@/lib/detect-agent";
 import { saveBlueprintVersion } from "@/lib/mcp/store.mjs";
@@ -13,6 +14,8 @@ const limiter = rateLimiter(15, 60_000);
  * Auto-detects the best agent format if format is omitted.
  */
 export async function POST(req: NextRequest) {
+  const blocked = mcpGuard();
+  if (blocked) return blocked;
   const limited = limiter.check(req);
   if (limited) return limited;
 

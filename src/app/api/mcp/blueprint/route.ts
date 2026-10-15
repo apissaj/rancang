@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { mcpGuard } from "@/lib/mcp-guard";
 import { DOC_NAMES, listBlueprints, resolveBlueprint, saveBlueprint } from "@/lib/mcp/store.mjs";
 import { rateLimiter } from "@/lib/rate-limit";
 
@@ -22,6 +23,8 @@ const MAX_TOTAL_CHARS = 800_000;
  */
 
 export async function GET(req: NextRequest) {
+  const blocked = mcpGuard();
+  if (blocked) return blocked;
   const limited = limiter.check(req);
   if (limited) return limited;
   const id = req.nextUrl.searchParams.get("id");
@@ -42,8 +45,10 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const blocked = limiter.check(req);
+  const blocked = mcpGuard();
   if (blocked) return blocked;
+  const limited = limiter.check(req);
+  if (limited) return limited;
 
   let body: unknown;
   try {

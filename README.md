@@ -312,6 +312,7 @@ PORT=3100 HOSTNAME=0.0.0.0 node .next/standalone/server.js
 | `NODE_ENV` | ❌ | `production` | Environment mode. |
 | `RANCANG_HOME` | ❌ | `~/.rancang` | Folder penyimpanan blueprint yang dibaca MCP server. |
 | `RANCANG_MCP_PORT` | ❌ | `3110` | Port transport HTTP MCP. |
+| `MCP_ENABLED` | ❌ | — | Set `1` untuk mengaktifkan route `/api/mcp/*` saat `NODE_ENV=production`. Tanpa ini, route MCP mengembalikan 404 di production. Di development route selalu aktif. |
 | `NEXT_PUBLIC_FIREBASE_*` | ❌ | — | 6 variabel Firebase Client SDK. Lihat `.env.example`. |
 | `FIREBASE_SERVICE_ACCOUNT_JSON` | ❌ | — | JSON string service account untuk server-side sync. |
 

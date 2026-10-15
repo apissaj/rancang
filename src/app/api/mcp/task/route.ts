@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { mcpGuard } from "@/lib/mcp-guard";
 import { resolveBlueprint, parseTasks, completeTask, summarizeTasks, nextTask } from "@/lib/mcp/store.mjs";
 import { rateLimiter } from "@/lib/rate-limit";
 
@@ -6,6 +7,8 @@ export const dynamic = "force-dynamic";
 const limiter = rateLimiter(120, 60_000);
 
 export async function GET(req: NextRequest) {
+  const blocked = mcpGuard();
+  if (blocked) return blocked;
   const limited = limiter.check(req);
   if (limited) return limited;
 
@@ -39,6 +42,8 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const blocked = mcpGuard();
+  if (blocked) return blocked;
   const limited = limiter.check(req);
   if (limited) return limited;
 

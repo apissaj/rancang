@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { mcpGuard } from "@/lib/mcp-guard";
 import { detectAgents, getRecommendedFormat } from "@/lib/detect-agent";
 import { rateLimiter } from "@/lib/rate-limit";
 
@@ -10,6 +11,8 @@ const limiter = rateLimiter(60, 60_000);
  * Returns list of detected AI coding agents and recommended format.
  */
 export async function GET(req: NextRequest) {
+  const blocked = mcpGuard();
+  if (blocked) return blocked;
   const limited = limiter.check(req);
   if (limited) return limited;
   const dir = req.nextUrl.searchParams.get("dir") || process.cwd();
