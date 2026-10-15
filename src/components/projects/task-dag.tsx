@@ -3,10 +3,10 @@ import type { TaskItem } from "@/lib/projects";
 
 function taskDependencies(taskText: string, selfId?: string): string[] {
   const ids = new Set<string>();
-  const regex = /\b(?:T(?:A-)?\d{2,4})\b/gi;
+  const regex = /\b(?=[A-Za-z0-9.-]*\d)(?:[A-Za-z][A-Za-z0-9]*(?:[-.][A-Za-z0-9]+)*|\d+(?:[.-][A-Za-z0-9]+)*)\b/gi;
   const normSelf = selfId ? selfId.trim().toUpperCase() : null;
   for (const m of taskText.matchAll(regex)) {
-    const norm = m[0].toUpperCase().replace("TA-", "T");
+    const norm = m[0].toUpperCase();
     if (normSelf && norm === normSelf) continue;
     ids.add(norm);
   }
