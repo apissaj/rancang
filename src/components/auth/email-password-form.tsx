@@ -84,7 +84,7 @@ export function EmailPasswordForm({ mode, onSuccess }: Props) {
           {submitting && <Loader2 className="size-4 animate-spin" />}
           Send reset link
         </Button>
-        <Button type="button" variant="outline" onClick={() => setForgot(false)} className="w-full">
+        <Button type="button" variant="default" onClick={() => setForgot(false)} className="w-full">
           Back to sign in
         </Button>
         {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
