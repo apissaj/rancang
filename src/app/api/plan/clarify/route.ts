@@ -1,4 +1,5 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { requireUid } from "@/lib/sync-auth";
 import { chatCompletion } from "@/lib/llm";
 import { getDefaultModel } from "@/lib/models";
 import type { ClarifyResponse } from "@/lib/clarify-types";
@@ -69,9 +70,11 @@ function isValidClarifyResponse(v: unknown): v is ClarifyResponse {
   });
 }
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   const blocked = limiter.check(req);
   if (blocked) return blocked;
+  const check = await requireUid(req);
+  if ("error" in check) return check.error;
 
   const { idea } = (await req.json()) as { idea: string };
 

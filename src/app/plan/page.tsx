@@ -32,7 +32,7 @@ export default function PlanPage() {
   const [clarifyElapsed, setClarifyElapsed] = useState(0);
   const [clarify, setClarify] = useState<ClarifyResponse | null>(null);
   const sync = useSync();
-  const { storageVersion } = useAuth();
+  const { user, storageVersion } = useAuth();
 
   const [models, setModels] = useState<string[]>([]);
   const [model, setModel] = useState("");
@@ -153,6 +153,7 @@ export default function PlanPage() {
     manualDocRef,
     partialRef,
     getSignal: () => abortRef.current?.signal,
+    getToken: async () => (user ? await user.getIdToken() : null),
   });
   const [retryingDoc, setRetryingDoc] = useState<PreviewDoc | null>(null);
 
@@ -228,9 +229,10 @@ export default function PlanPage() {
     setNotice(null);
     abortRef.current = new AbortController();
     try {
+      const token = user ? await user.getIdToken() : null;
       const res = await fetch("/api/plan/clarify", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         signal: abortRef.current.signal,
         body: JSON.stringify({ idea }),
       });

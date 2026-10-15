@@ -36,19 +36,22 @@ export function usePlanStream({
   manualDocRef,
   partialRef,
   getSignal,
+  getToken,
 }: {
   setDocs: Dispatch<SetStateAction<Record<string, string>>>;
   setDocStatus: Dispatch<SetStateAction<Record<string, DocStatus>>>;
   manualDocRef: MutableRefObject<boolean>;
   partialRef: MutableRefObject<{ markdown: string; docs: Record<string, string> }>;
   getSignal: () => AbortSignal | undefined;
+  getToken: () => Promise<string | null>;
 }) {
   const [docErrors, setDocErrors] = useState<DocErrors>({});
 
   const streamMultiDocs = async (ideaText: string, selectedModel: string, answers: Answer[] | undefined) => {
+    const token = await getToken();
     const res = await fetch("/api/plan/full", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
       signal: getSignal(),
       body: JSON.stringify({ idea: ideaText, answers, model: selectedModel }),
     });
@@ -131,9 +134,10 @@ export function usePlanStream({
   };
 
   const fetchSingleDoc = async (doc: string, ideaText: string, selectedModel: string) => {
+    const token = await getToken();
     const res = await fetch("/api/plan/full", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
       body: JSON.stringify({ idea: ideaText, model: selectedModel }),
     });
     if (!res.ok) throw new Error(await res.text());

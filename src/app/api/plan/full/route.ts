@@ -1,3 +1,5 @@
+import { NextRequest } from "next/server";
+import { requireUid } from "@/lib/sync-auth";
 import { streamChatCompletion, toTextDeltaStream } from "@/lib/llm";
 import { getDefaultModel, getAvailableModels } from "@/lib/models";
 import { rateLimiter } from "@/lib/rate-limit";
@@ -105,9 +107,11 @@ function buildUserMessage(idea: string, answers?: Answer[]): string {
   return `Clarifying answers:\n${lines.join("\n")}\n\nIdea:\n${idea}`;
 }
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   const blocked = limiter.check(req);
   if (blocked) return blocked;
+  const check = await requireUid(req);
+  if ("error" in check) return check.error;
 
   const { idea, answers, model } = (await req.json()) as {
     idea: string;

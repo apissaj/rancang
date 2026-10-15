@@ -95,7 +95,7 @@ function DesignPageInner() {
 
   const sync = useSync();
   const searchParams = useSearchParams();
-  const { storageVersion } = useAuth();
+  const { user, storageVersion } = useAuth();
   const [plans, setPlans] = useState<PlanRecord[]>([]);
 
   // Clears the working state back to a blank setup form. Used both by the manual
@@ -154,9 +154,10 @@ function DesignPageInner() {
     setMcpBlueprintId(null);
     const planMarkdown = sourcePlanId !== "none" ? plans.find((p) => p.id === sourcePlanId)?.markdown : undefined;
     try {
+      const token = user ? await user.getIdToken() : null;
       const res = await fetch("/api/design", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         body: JSON.stringify({ idea, planMarkdown, vibe: vibe || undefined, platform, pwa }),
       });
       if (!res.ok) throw new Error((await res.json().catch(() => ({ error: "Pembuatan gagal" }))).error ?? "Pembuatan gagal");
@@ -542,6 +543,7 @@ function ResultView({
   onPublish: (record: DesignRecord) => Promise<void>;
   onEditSetup: () => void;
 }) {
+  const { user } = useAuth();
   const platforms: ("mobile" | "web")[] = platform === "both" ? ["mobile", "web"] : [platform];
   const [activeTab, setActiveTab] = useState<"mobile" | "web">(platforms[0]);
   const [currentScreenId, setCurrentScreenId] = useState<{ mobile?: string; web?: string }>({});
@@ -608,9 +610,10 @@ function ResultView({
     setImageError(null);
     setGenStartedAt(Date.now());
     try {
+      const token = user ? await user.getIdToken() : null;
       const res = await fetch("/api/design/image", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         body: JSON.stringify({ screen: target, designMd, designId: activeDesign?.id }),
       });
       if (!res.ok) throw new Error((await res.json().catch(() => ({ error: "Pembuatan gambar gagal" }))).error ?? "Pembuatan gambar gagal");
@@ -691,9 +694,10 @@ function ResultView({
     setError(null);
     const instruction = aiInstruction;
     try {
+      const token = user ? await user.getIdToken() : null;
       const res = await fetch("/api/design/edit", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         body: JSON.stringify({ designMd, screens, instruction }),
       });
       if (!res.ok) throw new Error((await res.json().catch(() => ({ error: "Edit gagal" }))).error ?? "Edit gagal");

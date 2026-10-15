@@ -1,4 +1,5 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { requireUid } from "@/lib/sync-auth";
 import { generateScreenImage } from "@/lib/image-gen";
 import { extractFrontMatter, resolveTokens } from "@/lib/design-yaml";
 import { saveImage } from "@/lib/image-storage";
@@ -44,9 +45,11 @@ function buildPrompt(screen: Screen, designMd: string, styleHint?: string): stri
   );
 }
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   const blocked = limiter.check(req);
   if (blocked) return blocked;
+  const check = await requireUid(req);
+  if ("error" in check) return check.error;
 
   let body: {
     screen: Screen;
