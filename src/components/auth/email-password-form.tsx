@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { Loader2 } from "lucide-react";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
 import {
   createUserWithEmailAndPassword,
   sendPasswordResetEmail,
@@ -23,6 +23,7 @@ export function EmailPasswordForm({ mode, onSuccess }: Props) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [forgot, setForgot] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -83,7 +84,7 @@ export function EmailPasswordForm({ mode, onSuccess }: Props) {
           {submitting && <Loader2 className="size-4 animate-spin" />}
           Send reset link
         </Button>
-        <Button type="button" variant="ghost" onClick={() => setForgot(false)} className="w-full">
+        <Button type="button" variant="outline" onClick={() => setForgot(false)} className="w-full">
           Back to sign in
         </Button>
         {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
@@ -125,17 +126,28 @@ export function EmailPasswordForm({ mode, onSuccess }: Props) {
             </button>
           )}
         </div>
-        <Input
-          id="password"
-          type="password"
-          placeholder="••••••••"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          autoComplete={mode === "signup" ? "new-password" : "current-password"}
-          className="h-10 px-3.5 text-sm"
-          minLength={mode === "signup" ? 6 : undefined}
-          required
-        />
+        <div className="relative">
+          <Input
+            id="password"
+            type={showPassword ? "text" : "password"}
+            placeholder="••••••••"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            autoComplete={mode === "signup" ? "new-password" : "current-password"}
+            className="h-10 px-3.5 pr-10 text-sm"
+            minLength={mode === "signup" ? 6 : undefined}
+            required
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword((v) => !v)}
+            aria-label={showPassword ? "Hide password" : "Show password"}
+            aria-pressed={showPassword}
+            className="absolute top-1/2 right-2 flex size-7 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring"
+          >
+            {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+          </button>
+        </div>
       </div>
       <Button type="submit" size="lg" disabled={submitting} className="mt-1 w-full">
         {submitting && <Loader2 className="size-4 animate-spin" />}
