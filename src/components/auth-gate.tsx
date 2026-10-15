@@ -1,44 +1,25 @@
 "use client";
 
-import { Lock } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { useEffect, useState } from "react";
+import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/components/auth-provider";
 import { firebaseEnabled } from "@/lib/firebase-client";
 
-/** Wrap a page's content with this to require a signed-in user before rendering it. */
 export function AuthGate({ children }: { children: React.ReactNode }) {
-  const { user, loading, signIn } = useAuth();
+  const { user, loading } = useAuth();
+  const router = useRouter();
+  const pathname = usePathname();
+  const [redirected, setRedirected] = useState(false);
+
+  useEffect(() => {
+    if (loading || !firebaseEnabled || user || redirected) return;
+    if (pathname === "/login") return;
+    setRedirected(true);
+    router.replace(`/login?next=${encodeURIComponent(pathname ?? "/")}`);
+  }, [loading, user, redirected, pathname, router]);
 
   if (loading) return null;
-
-  // Anonymous/localStorage mode: if Firebase isn't configured, the app works
-  // without any sign-in — skip the gate entirely.
   if (!firebaseEnabled) return <>{children}</>;
-
-  if (!user) {
-    return (
-      <div className="flex flex-1 items-center justify-center px-4 py-16">
-        <div className="flex w-full max-w-sm flex-col items-center gap-4 rounded-xl border bg-card p-8 text-center shadow-sm">
-          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
-            <Lock className="h-5 w-5 text-muted-foreground" />
-          </div>
-          <div>
-            <h2 className="text-lg font-semibold">Sign in to continue</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {firebaseEnabled
-                ? "This page is available to signed-in users only."
-                : "Sign-in isn't configured for this deployment."}
-            </p>
-          </div>
-          {firebaseEnabled && (
-            <Button onClick={signIn} className="w-full">
-              Sign in with Google
-            </Button>
-          )}
-        </div>
-      </div>
-    );
-  }
-
+  if (!user) return null;
   return <>{children}</>;
 }
