@@ -17,7 +17,7 @@
     "rancang": "./src/rancang-cli.mjs"
   },
   "dependencies": {
-    "@base-ui/react": "^1.6.0",
+    "@base-ui/react": "^1.9.0",
     "@google-cloud/firestore": "^9.1.0",
     "chalk": "^4.1.2",
     "class-variance-authority": "^0.7.1",
