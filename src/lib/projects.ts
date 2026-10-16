@@ -19,6 +19,7 @@ export interface BlueprintItem {
   createdAt: number;
   updatedAt: number;
   source: string;
+  agent?: string | null;
   docs: string[];
   tasks: TaskSummary;
 }

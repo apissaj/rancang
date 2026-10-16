@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Hammer } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -22,13 +22,26 @@ function GoogleIcon() {
   );
 }
 
+/** Only same-origin paths: rejects absolute, protocol-relative (`//`, `/\`),
+ * and non-http schemes. Prevents post-login open redirect via `?next=`. */
+function safeNext(raw: string | null): string {
+  const v = (raw ?? "").trim();
+  return v.startsWith("/") && !v.startsWith("//") && !v.startsWith("/\\") ? v : "/plan";
+}
+
 export function LoginCard() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { loading, signIn } = useAuth();
+  const { user, loading, signIn } = useAuth();
   const [tabs, setTabs] = useState<"signin" | "signup">("signin");
 
-  const next = searchParams.get("next") ?? "/plan";
+  const next = safeNext(searchParams.get("next"));
+
+  useEffect(() => {
+    if (user && !loading) {
+      router.replace(next);
+    }
+  }, [user, loading, next, router]);
 
   if (loading) return null;
 

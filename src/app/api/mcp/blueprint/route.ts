@@ -34,7 +34,7 @@ export async function GET(req: NextRequest) {
       if (!record) {
         return NextResponse.json({ error: `Blueprint not found: ${id}` }, { status: 404 });
       }
-      return NextResponse.json({ blueprint: record });
+      return NextResponse.json({ blueprint: { ...record, agent: record.agent ?? record.lastAgent ?? null } });
     }
     const items = listBlueprints();
     return NextResponse.json({ count: items.length, blueprints: items });

@@ -30,6 +30,7 @@ export default function Integrations() {
               key={name}
               className="flex items-center justify-center gap-2 rounded-sm border border-border bg-card/60 px-4 py-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
             >
+              {/* eslint-disable-next-line @next/next/no-img-element -- local static SVGs; next/image would fail on SVGs without dangerouslyAllowSVG/unoptimized */}
               <img
                 src={src}
                 alt={`${name} logo`}

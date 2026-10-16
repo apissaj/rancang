@@ -14,6 +14,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const blueprintId = body.blueprintId || body.blueprint_id;
     const markdown = body.markdown;
+    const agent = typeof body.agent === "string" ? body.agent : undefined;
 
     if (!blueprintId || typeof blueprintId !== "string") {
       return NextResponse.json(
@@ -29,7 +30,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const result = syncTasksFromMarkdown(blueprintId, markdown);
+    const result = syncTasksFromMarkdown(blueprintId, markdown, agent);
     const tasks = result.tasks || [];
     const summary = result.summary || summarizeTasks(tasks);
     const bp = resolveBlueprint(blueprintId);

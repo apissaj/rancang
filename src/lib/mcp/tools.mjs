@@ -136,6 +136,7 @@ export const TOOLS = [
         idea: b.idea,
         model: b.model,
         source: b.source,
+        agent: b.agent ?? null,
         updatedAt: new Date(b.updatedAt ?? b.createdAt).toISOString(),
         docs: b.docs,
         tasks: b.tasks,
@@ -264,8 +265,8 @@ export const TOOLS = [
       required: ["id", "task_id"],
       additionalProperties: false,
     },
-    handler: ({ id, task_id, done }) => {
-      const result = completeTask(id, task_id, done !== false);
+    handler: ({ id, task_id, done }, agent) => {
+      const result = completeTask(id, task_id, done !== false, agent);
       return text({
         id: result.id,
         resolved_id: result.id,
@@ -305,13 +306,14 @@ export const TOOLS = [
       required: ["docs"],
       additionalProperties: false,
     },
-    handler: (args) => {
-      const record = saveBlueprint({ ...args, source: args.source || "mcp" });
+    handler: (args, agent) => {
+      const record = saveBlueprint({ ...args, source: args.source || "mcp", agent });
       return text({
         id: record.id,
         title: record.title,
         docs: DOC_NAMES.filter((d) => record.docs?.[d]),
         updatedAt: record.updatedAt,
+        lastAgent: record.lastAgent ?? null,
       });
     },
   },
@@ -356,7 +358,11 @@ export async function registerTools(server, { CallToolRequestSchema, ListToolsRe
     if (!found) return fail(new Error(`Unknown tool: ${request.params.name}`));
     try {
       const args = checkArgs(found.inputSchema, request.params.arguments);
-      return await found.handler(args);
+      const client = server.getClientVersion?.();
+      const agent = client
+        ? client.name + (client.version ? ` ${client.version}` : "")
+        : undefined;
+      return await found.handler(args, agent);
     } catch (err) {
       return fail(err);
     }

@@ -12,6 +12,7 @@ import {
   GitBranch,
   History,
   Palette,
+  Bot,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -54,6 +55,16 @@ export function BlueprintCard({ b, ctl }: { b: BlueprintItem; ctl: ProjectsContr
               {hasDesign && (
                 <Badge variant="secondary" className="gap-1 text-xs">
                   <Palette className="h-3 w-3" /> Desain
+                </Badge>
+              )}
+              {b.agent && (
+                <Badge
+                  variant="outline"
+                  className="gap-1 text-xs text-muted-foreground"
+                  title={b.agent}
+                >
+                  <Bot className="h-3 w-3" />
+                  <span className="max-w-[10rem] truncate">{b.agent}</span>
                 </Badge>
               )}
               {tasksTotal > 0 && tasksDone === tasksTotal && (

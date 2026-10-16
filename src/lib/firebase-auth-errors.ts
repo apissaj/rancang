@@ -1,7 +1,7 @@
 const MESSAGES: Record<string, string> = {
-  "auth/wrong-password": "Incorrect password.",
-  "auth/user-not-found": "No account found with that email.",
-  "auth/email-already-in-use": "This email is already registered.",
+  "auth/wrong-password": "Incorrect email or password.",
+  "auth/user-not-found": "Incorrect email or password.",
+  "auth/email-already-in-use": "This email is already in use.",
   "auth/invalid-email": "Invalid email address.",
   "auth/weak-password": "Password should be at least 6 characters.",
   "auth/too-many-requests": "Too many attempts. Try again later.",

@@ -116,11 +116,14 @@ export function EmailPasswordForm({ mode, onSuccess }: Props) {
           {mode === "signin" && (
             <button
               type="button"
+              disabled={!email.trim()}
+              aria-disabled={!email.trim()}
+              title={!email.trim() ? "Masukkan email terlebih dahulu" : undefined}
               onClick={() => {
                 setError(null);
                 setForgot(true);
               }}
-              className="text-xs font-medium text-primary underline-offset-4 hover:underline"
+              className="text-xs font-medium text-primary underline-offset-4 hover:underline disabled:pointer-events-none disabled:opacity-50"
             >
               Forgot password?
             </button>

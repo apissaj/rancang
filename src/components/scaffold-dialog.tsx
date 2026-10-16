@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { FolderOpen, Loader2, Check, Copy, AlertCircle, Terminal, Bot, Cpu, FileCode2, FileText } from "lucide-react";
+import { FolderOpen, Loader2, Check, Copy, AlertCircle, Terminal, Bot, Cpu, FileCode2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -92,12 +92,10 @@ export function ScaffoldDialog({ blueprintId, blueprintTitle, disabled }: Props)
   const [cmdCopied, setCmdCopied] = useState(false);
   const [activeTab, setActiveTab] = useState<CommandTab>("opencode");
   const [recommended, setRecommended] = useState<string | null>(null);
-  const [detecting, setDetecting] = useState(false);
 
   // Auto-detect best format on open
   useEffect(() => {
     if (!open) return;
-    setDetecting(true);
     fetch("/api/mcp/detect")
       .then((r) => r.json())
       .then((d) => {
@@ -106,8 +104,7 @@ export function ScaffoldDialog({ blueprintId, blueprintTitle, disabled }: Props)
           setFormat(d.recommended);
         }
       })
-      .catch(() => {})
-      .finally(() => setDetecting(false));
+      .catch(() => {});
   }, [open]);
 
   async function handleScaffold() {
