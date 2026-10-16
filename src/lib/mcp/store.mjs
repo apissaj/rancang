@@ -36,7 +36,7 @@ function newId() {
 }
 
 /** Strip control chars + trim + cap length so a client-supplied agent string stays safe to store. */
-function cleanAgent(agent) {
+export function cleanAgent(agent) {
   if (!agent) return undefined;
   return String(agent)
     .replace(/[\u0000-\u001F\u007F]/g, "")
