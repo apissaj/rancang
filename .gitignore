@@ -52,3 +52,6 @@ next-env.d.ts
 /spec-kit-assets
 *.log
 !package-lock.json
+
+# data lokal serena
+.serena/
