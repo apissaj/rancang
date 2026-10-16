@@ -48,6 +48,11 @@ jadi yang dibaca agent = persis yang baru kamu generate.
 Semua tool nerima `id` opsional (id penuh, prefix, atau boleh dikosongin =
 blueprint terbaru).
 
+`rancang_task_complete` dan `rancang_save_blueprint` juga menyimpan nama klien
+MCP (`clientInfo` dari handshake initialize: nama + versi) sebagai `lastAgent`
+di record blueprint. Nilai ini yang tampil sebagai badge agent di halaman
+Proyek web app.
+
 ## Menjalankan
 
 ```bash

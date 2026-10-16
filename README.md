@@ -46,6 +46,8 @@ Tanpa akun. Tanpa database. Tanpa registrasi. Semua data tetap di browser kamu.
 | **🎨 Generator Desain** | Ide → spesifikasi token `DESIGN.md` (format Google DESIGN.md) + prototipe wireframe (screenshot visual) yang bisa diklik. |
 | **🔌 MCP Server** | Blueprint bisa ditarik langsung oleh Claude Code / Cursor / Codex / Hermes lewat MCP — agent ambil execution prompt sendiri, kerjakan task satu per satu, progres tersimpan dan bisa putus-nyambung. |
 | **🔐 Tanpa Akun** | Data tersimpan di `localStorage`. Tidak ada server-side database, tidak ada registrasi. Buka, pakai, tutup — selesai. |
+| **✉️ Masuk Email/Password** | Opsional: halaman `/login` dengan tab Sign in/Sign up dan reset password. Aktif hanya kalau variabel `NEXT_PUBLIC_FIREBASE_*` diset; selain itu tetap anonim penuh. |
+| **🤖 Badge Agent** | Kartu Proyek menampilkan badge nama AI agent terakhir yang men-tick task lewat MCP server (diambil dari `clientInfo` koneksi). |
 | **🌐 Gateway Sendiri** | Semua LLM call lewat Route Handler server-side ke OpenAI-compatible gateway milikmu. API key tidak pernah ke browser. |
 | **📝 Riwayat & Versi** | Setiap blueprint tersimpan otomatis. Bisa diedit, dihapus, atau dipulihkan ke versi sebelumnya. |
 | **🌙 Dark Theme** | Tema gelap default dengan Tailwind v4 + shadcn/ui. Mudah dikustomisasi via CSS variables. |
@@ -79,7 +81,7 @@ Ide → spesifikasi `DESIGN.md` (YAML frontmatter + token spec) + wireframe visu
 | **LLM Client** | OpenAI-compatible streaming via `@/lib/llm.ts` (fetch-based, tanpa SDK) |
 | **Markdown** | `react-markdown` + `remark-gfm` + `rehype-highlight` |
 | **ZIP Export** | `jszip` (client-side, tanpa server) |
-| **Auth (opsional)** | Firebase Client SDK + Firebase Admin SDK (Google Sign-In) |
+| **Auth (opsional)** | Firebase Client SDK + Firebase Admin SDK (Email/Password + Google Sign-In di `/login`) |
 | **Sync (opsional)** | Firestore (per-user session sync antar perangkat) |
 
 > **Tanpa database, tanpa ORM, tanpa auth wajib.** Semua data bisa jalan 100% di browser. Firebase opsional penuh.
@@ -313,8 +315,10 @@ PORT=3100 HOSTNAME=0.0.0.0 node .next/standalone/server.js
 | `RANCANG_HOME` | ❌ | `~/.rancang` | Folder penyimpanan blueprint yang dibaca MCP server. |
 | `RANCANG_MCP_PORT` | ❌ | `3110` | Port transport HTTP MCP. |
 | `MCP_ENABLED` | ❌ | — | Set `1` untuk mengaktifkan route `/api/mcp/*` saat `NODE_ENV=production`. Tanpa ini, route MCP mengembalikan 404 di production. Di development route selalu aktif. |
-| `NEXT_PUBLIC_FIREBASE_*` | ❌ | — | 6 variabel Firebase Client SDK. Lihat `.env.example`. |
+| `NEXT_PUBLIC_FIREBASE_*` | ❌ | — | 6 variabel Firebase Client SDK (pakai Email/Password **dan** Google Sign-In). Lihat `.env.example`. |
 | `FIREBASE_SERVICE_ACCOUNT_JSON` | ❌ | — | JSON string service account untuk server-side sync. |
+
+> **Login Email/Password** tidak butuh env tambahan — cukup 6 `NEXT_PUBLIC_FIREBASE_*` di atas dan provider Email/Password di-aktifkan dari Firebase console.
 
 ### Model Picker
 
@@ -464,6 +468,8 @@ Rancang bisa jalan tanpa Firebase. Tapi kalau mau sinkronisasi history antar per
 
 Tanpa variabel tersebut, aplikasi tetap 100% fungsional — anonim, localStorage saja.
 
+Dengan Firebase aktif, tombol **Sign in** di header membuka `/login` (email/password atau Google, plus "Forgot password?"), dan AuthGate mengarahkan halaman yang butuh akun ke `/login?next=<path>` — setelah berhasil login kamu dikembalikan ke halaman semula.
+
 ---
 
 ## Panduan Kontribusi
@@ -479,6 +485,7 @@ Tanpa variabel tersebut, aplikasi tetap 100% fungsional — anonim, localStorage
 - Untuk perubahan besar, buka **issue** dulu untuk diskusi.
 - Ikuti konvensi commit [Conventional Commits](https://www.conventionalcommits.org/).
 - Pastikan `npx tsc --noEmit` lulus sebelum commit.
+- Jalankan `npm run test:unit` (Vitest + React Testing Library) sebelum commit — CI juga menjalankannya.
 - Jangan commit `.env` — file sudah di `.gitignore`.
 
 ---

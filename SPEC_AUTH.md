@@ -12,8 +12,10 @@ Add Firebase Google Authentication and Firestore-backed session sync to this exi
   appId: NEXT_PUBLIC_FIREBASE_APP_ID
   ```
 - Add a "Sign in with Google" button in the top nav (use `signInWithPopup` + `GoogleAuthProvider`). Show user's avatar/name + "Sign out" when logged in, show "Sign in" button when logged out.
+  - **Update (shipped):** Email/password sign-in lives on a dedicated `/login` page (`src/components/auth/login-card.tsx`) with Sign in / Sign up tabs (`signInWithEmailAndPassword` / `createUserWithEmailAndPassword`) and a "Forgot password?" flow (`sendPasswordResetEmail`). Both run through the Firebase client SDK with the same `NEXT_PUBLIC_FIREBASE_*` config — no extra env vars; the Email/Password provider must be enabled in the Firebase console. The nav shows a "Sign in" button linking to `/login` (avatar + "Sign out" when logged in), and `AuthGate` redirects anonymous users to `/login?next=<path>` so they return to the original page after authenticating.
 - Auth state via a React context/provider (`src/components/auth-provider.tsx`) wrapping the app, exposing `{ user, loading, signIn, signOut }`.
 - The app MUST remain fully usable with zero auth (anonymous users keep working exactly as today, using localStorage only — do not force login, do not gate /chat or /plan behind auth).
+  - **Update (shipped):** When Firebase env vars ARE set, `AuthGate` (used by `/plan`, `/design`, `/projects`) redirects signed-out users to `/login?next=<path>` instead of rendering. Without Firebase env vars (`firebaseEnabled` false), nothing is gated — anonymous localStorage-only usage is unchanged.
 
 ## Feature B — Firestore session sync (only for logged-in users)
 - Add `firebase-admin` (server SDK) as a dependency, initialized server-side from a service account JSON via env var `FIREBASE_SERVICE_ACCOUNT_JSON` (the full JSON as a single-line string env var — parse it with `JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON!)`). Put this in `src/lib/firebase-admin.ts`.
