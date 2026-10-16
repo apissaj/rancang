@@ -110,6 +110,15 @@ export function EmailPasswordForm({ mode, onSuccess }: Props) {
           required
         />
       </div>
+      <input
+        type="text"
+        name="username"
+        autoComplete="username"
+        aria-hidden="true"
+        tabIndex={-1}
+        readOnly
+        className="hidden"
+      />
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between">
           <Label htmlFor="password">Password</Label>

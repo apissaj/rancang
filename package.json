@@ -10,6 +10,7 @@
     "lint": "eslint src",
     "test:unit": "vitest run",
     "test": "node scripts/run-tests.mjs",
+    "precommit": "node scripts/pre-commit.mjs",
     "cli": "node src/rancang-cli.mjs",
     "services": "powershell -ExecutionPolicy Bypass -File scripts/dev-services.ps1"
   },

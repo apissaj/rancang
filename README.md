@@ -279,6 +279,24 @@ npm run dev
 # → http://localhost:3000
 ```
 
+### Pre-commit Hook
+
+Git hook aktif via `core.hooksPath = .husky`. Sebelum commit, `scripts/pre-commit.mjs` dijalankan berurutan dan berhenti jika ada yang gagal:
+
+1. `eslint src --max-warnings 0`
+2. `node scripts/run-tests.mjs` (test integrasi `*.test.mjs`)
+3. `vitest run` (unit test, setara `npm run test:unit`)
+
+Jalankan manual kapan saja: `npm run precommit`.
+
+Matikan hook sementara:
+
+```bash
+git config --unset core.hooksPath
+```
+
+Nyala lagi: `git config core.hooksPath .husky`. Catatan: pengaturan ini lokal per-clone (tidak ikut ter-commit), jadi kontributor baru perlu menyetelnya sekali setelah clone.
+
 ### Production Build
 
 ```bash
